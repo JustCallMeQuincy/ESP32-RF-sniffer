@@ -52,6 +52,4 @@ If you'd like to access the webpage from a different device;
 - Currently, when refreshing the page - the last 20 logs are displayed. This is done to prevent bad performance or long loading times
 
 # Purpose
-Education, testing your own devices, testing devices you have explicit permission to test.
-
-Don't do illegal things :)
+This is a testing/demo tool, not meant for any purposes outside of educational context.

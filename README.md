@@ -14,6 +14,15 @@
 - Web browser
 
 # Setup
+Clone the project to your local device and open Visual Studio Code in the directory.
+
+**Example:**
+clone the project
+```git clone https://github.com/JustCallMeQuincy/ESP32-RF-sniffer.git```
+then use
+```cd ./ESP32-RF-sniffer```
+to enter its directory
+
 ## Setup the back-end
 1. Choose a port (default value in `socketio-backend/server.js` for `var port` is `8890`)
 2. Install NodeJS

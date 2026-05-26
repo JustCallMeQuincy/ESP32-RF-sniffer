@@ -31,6 +31,13 @@
 4. Connect the ESP32 to your device
 5. Use PlatformIO to flash the firmware to the ESP32
 
+### Diagrams using the ESP32-NodeMCU-32S
+#### Wiring diagram
+![Wiring diagram](media/Wiring%20diagram.png)
+
+#### Board pinout
+![ESP32-NodeMCU-32S pinout](media/ESP32-NodeMCU-32S%20pinout.png)
+
 ## Viewing the webpage
 Navigate to http://localhost:8890/
 

@@ -1,0 +1,373 @@
+#include <Arduino.h>
+#include <Adafruit_SH1106.h>
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
+#include <RCSwitch.h>
+#include <SocketIOclient.h>
+#include <WebSocketsClient.h>
+#include <WiFi.h>
+#include <Wire.h>
+
+// config
+#include "config.h"
+
+WiFiClient WiFiclient;
+SocketIOclient socketIO;
+
+#define i2C_ADDRESS 0x3C
+Adafruit_SH1106 display;
+bool displayAvailable = false;
+
+// buffer for the oled message
+char messageBuffer[256];
+
+#define pinReceiver 13
+#define pinLed 2
+
+#define DEFAULT_TX_BITLENGTH 24
+
+RCSwitch mySwitch = RCSwitch();
+
+int code = 0;
+bool ledStatus = false;
+
+const size_t codeHistorySize = 4;
+unsigned long codeHistory[codeHistorySize] = {0, 0, 0, 0};
+size_t codeHistoryCount = 0;
+
+void addReceivedCodeToHistory(unsigned long receivedCode)
+{
+    for (size_t i = codeHistorySize - 1; i > 0; --i)
+    {
+        codeHistory[i] = codeHistory[i - 1];
+    }
+    codeHistory[0] = receivedCode;
+
+    if (codeHistoryCount < codeHistorySize)
+    {
+        codeHistoryCount++;
+    }
+}
+
+void displayLastCodes()
+{
+    if (!displayAvailable)
+    {
+        return;
+    }
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Last 4 codes:");
+
+    for (size_t i = 0; i < codeHistoryCount; i++)
+    {
+        display.setCursor(0, 10 + (i * 10));
+        display.printf("%lu", codeHistory[i]);
+    }
+
+    display.display();
+}
+
+void emitRfLog(unsigned long receivedCode, unsigned int bitLength, unsigned int pulseDelay, unsigned int protocol)
+{
+    JsonDocument rfPayload = DynamicJsonDocument(256);
+    rfPayload[0] = "rf_log";
+
+    JsonObject payload = rfPayload[1].to<JsonObject>();
+    payload["code"] = receivedCode;
+    payload["bitlength"] = bitLength;
+    payload["delay"] = pulseDelay;
+    payload["protocol"] = protocol;
+    payload["timestamp"] = millis();
+
+    String serialized;
+    serializeJson(rfPayload, serialized);
+    socketIO.sendEVENT(serialized);
+}
+
+void emitTxAck(unsigned long sentCode, unsigned int bitLength)
+{
+    JsonDocument txPayload = DynamicJsonDocument(128);
+    txPayload[0] = "tx_ack";
+
+    JsonObject payload = txPayload[1].to<JsonObject>();
+    payload["code"] = sentCode;
+    payload["bitlength"] = bitLength;
+    payload["timestamp"] = millis();
+
+    String serialized;
+    serializeJson(txPayload, serialized);
+    socketIO.sendEVENT(serialized);
+}
+
+void emitHeartbeatAck()
+{
+    JsonDocument heartbeatPayload = DynamicJsonDocument(128);
+    heartbeatPayload[0] = "esp_heartbeat_ack";
+
+    JsonObject payload = heartbeatPayload[1].to<JsonObject>();
+    payload["timestamp"] = millis();
+
+    String serialized;
+    serializeJson(heartbeatPayload, serialized);
+    socketIO.sendEVENT(serialized);
+}
+
+/**
+ * @brief helper function to display a message on the OLED
+ *
+ * @param messageBuffer
+ */
+void displayMessage(const char *messageBuffer)
+{
+    if (!displayAvailable)
+    {
+        return;
+    }
+
+    String message = String(messageBuffer);
+    display.clearDisplay();
+    display.setCursor(0, 1);
+    display.println(message);
+    display.display();
+}
+
+/**
+ * @brief event handler for the socketIO client
+ *
+ * @param type
+ * @param payload
+ * @param length
+ */
+void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
+{
+    switch (type)
+    {
+    case sIOtype_DISCONNECT:
+        Serial.printf("[SocketIo] Disconnected!\n");
+        break;
+
+    case sIOtype_CONNECT:
+        Serial.printf("[SocketIo] Connected to url: %s\n", payload);
+
+        socketIO.send(sIOtype_CONNECT, "/");
+        break;
+
+    case sIOtype_EVENT:
+        Serial.printf("[SocketIo] get event: %s\n", payload);
+
+        // parse the payload into a json object
+        JsonDocument payloadObject = DynamicJsonDocument(1024);
+        DeserializationError error = deserializeJson(payloadObject, payload, length);
+
+        if (error)
+        {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.c_str());
+            return;
+        }
+
+        String eventName = payloadObject[0];
+        Serial.printf("[IOc] event name: %s\n", eventName.c_str());
+
+        if (eventName == "update")
+        {
+            JsonObject attributesObject = payloadObject[1].as<JsonObject>();
+
+            // print all attributes
+            /*
+            for (JsonPair artribute : attributesObject) {
+                const char* key = artribute.key().c_str();
+                JsonVariant value = artribute.value();
+
+                Serial.printf("Key: %s, Value: %s\n", key, value.as<String>().c_str());
+            }
+            */
+
+            if (attributesObject.containsKey("buttonState"))
+            {
+                bool buttonState = attributesObject["buttonState"];
+                Serial.printf("[IOc] button state: %s\n", buttonState ? "true" : "false");
+            }
+
+            if (attributesObject.containsKey("message"))
+            {
+                String message = attributesObject["message"];
+                Serial.printf("[IOc] message: %s\n", message.c_str());
+                if (message != "null")
+                {
+                    displayMessage(message.c_str());
+                }
+            }
+        }
+
+        if (eventName == "clear")
+        {
+            Serial.printf("[IOc] clearing OLED screen\n");
+            if (displayAvailable)
+            {
+                display.clearDisplay();
+                display.display();
+            }
+        }
+
+        if (eventName == "esp_heartbeat")
+        {
+            Serial.printf("[IOc] heartbeat received\n");
+            emitHeartbeatAck();
+        }
+
+        if (eventName == "tx")
+        {
+            JsonObject attributesObject = payloadObject[1].as<JsonObject>();
+
+            if (attributesObject.containsKey("code"))
+            {
+                // parse code (could be number or string)
+                unsigned long txCode = 0;
+                JsonVariant codeVar = attributesObject["code"];
+
+                if (codeVar.is<const char *>())
+                {
+                    txCode = strtoul(codeVar.as<const char *>(), NULL, 10);
+                }
+                else
+                {
+                    txCode = codeVar.as<unsigned long>();
+                }
+
+                unsigned int bitLength = DEFAULT_TX_BITLENGTH;
+
+                if (attributesObject.containsKey("meta") && attributesObject["meta"].is<JsonObject>())
+                {
+                    JsonObject meta = attributesObject["meta"].as<JsonObject>();
+                    if (meta.containsKey("bitlength"))
+                    {
+                        bitLength = meta["bitlength"].as<unsigned int>();
+                    }
+                }
+                else if (attributesObject.containsKey("bitlength"))
+                {
+                    bitLength = attributesObject["bitlength"].as<unsigned int>();
+                }
+
+                Serial.printf("[IOc] tx request: %lu (bits %u)\n", txCode, bitLength);
+
+                if (txPin >= 0)
+                {
+                    mySwitch.send(txCode, bitLength);
+                    Serial.printf("[TX] Sent code: %lu (bits: %u)\n", txCode, bitLength);
+                    // show on OLED briefly
+                    sprintf(messageBuffer, "Sent: %lu", txCode);
+                    displayMessage(messageBuffer);
+                    emitTxAck(txCode, bitLength);
+                }
+                else
+                {
+                    Serial.println("[TX] Transmit pin not configured");
+                }
+            }
+        }
+
+        break;
+    }
+}
+
+void setup()
+{
+    delay(100);
+    Serial.begin(115200);
+    Serial.println("rf sniffer starting...");
+
+    SPI.begin();
+    Wire.begin();
+
+    Wire.beginTransmission(i2C_ADDRESS);
+    displayAvailable = (Wire.endTransmission() == 0);
+
+    if (displayAvailable)
+    {
+        display.begin(SH1106_SWITCHCAPVCC, i2C_ADDRESS);
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+
+        displayMessage("oled init");
+    }
+    else
+    {
+        Serial.println("OLED not detected, continuing without display");
+    }
+
+    pinMode(pinLed, OUTPUT);
+    mySwitch.enableReceive(pinReceiver);
+
+    // enable transmitter if configured
+    if (txPin >= 0)
+    {
+        mySwitch.enableTransmit(txPin);
+        Serial.printf("Transmitter enabled on pin %d\n", txPin);
+    }
+    else
+    {
+        Serial.println("Transmitter disabled (txPin < 0)");
+    }
+
+    WiFi.begin(ssid, password);
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    String ip = WiFi.localIP().toString();
+    Serial.printf("WiFi Connected %s\n", ip.c_str());
+
+    sprintf(messageBuffer, "WiFi connected\n\nIp: %s\n", ip.c_str());
+    displayMessage(messageBuffer);
+
+    // server address, port and URL
+    socketIO.begin(host, port, "/socket.io/?EIO=4");
+
+    // event handler
+    socketIO.onEvent(socketIOEvent);
+}
+
+void loop()
+{
+    socketIO.loop();
+    digitalWrite(pinLed, ledStatus);
+
+    if (mySwitch.available())
+    {
+        unsigned long receivedCode = mySwitch.getReceivedValue();
+        unsigned int bitLength = mySwitch.getReceivedBitlength();
+        unsigned int pulseDelay = mySwitch.getReceivedDelay();
+        unsigned int protocol = mySwitch.getReceivedProtocol();
+
+        addReceivedCodeToHistory(receivedCode);
+        displayLastCodes();
+        emitRfLog(receivedCode, bitLength, pulseDelay, protocol);
+
+        if (receivedCode == 0)
+        {
+            Serial.println("Unknown encoding");
+        }
+        else
+        {
+            ledStatus = !ledStatus; // Toggle LED status on each received code
+            Serial.print("Received code: ");
+            Serial.print(receivedCode);
+            Serial.print(" / bitlength: ");
+            Serial.print(bitLength);
+            Serial.print(" / delay: ");
+            Serial.print(pulseDelay);
+            Serial.print(" / protocol: ");
+            Serial.println(protocol);
+        }
+
+        mySwitch.resetAvailable();
+    }
+}

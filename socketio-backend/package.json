@@ -1,0 +1,19 @@
+{
+  "name": "socket.io-backend",
+  "version": "0.0.1",
+  "description": "demo backend for Socket.io example, part of the Socket.io workshop",
+  "main": "server.js",
+  "scripts": {
+    "watch": "nodemon ./server.js",
+    "start": "node ./server.js"
+  },
+  "author": "Kurt Beheydt",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "json5": "^2.2.3",
+    "socket.io": "^4.8.1"
+  }
+}

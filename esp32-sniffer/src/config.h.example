@@ -1,0 +1,14 @@
+// INSTRUCTIONS:
+// -------------------------------
+// 1. Fill out your network SSID, password, and the host address
+// 2. Rename this file to config.h
+// -------------------------------
+
+const char *ssid = ""; // Your WiFi SSID
+const char *password = ""; // Your WiFi password
+const char *host = ""; // The IP address of the machine running the web application (internal IP address)
+
+const uint16_t port = 8890;         // port for your socket.io server
+
+// Transmit pin for the TX functionality. Set to -1 to disable transmit functionality.
+const int txPin = 4; // Default: 4  → (GPIO4)

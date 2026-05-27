@@ -48,4 +48,4 @@
 # User-specific configuration files (possible sensitive information)
 config.h
 .env
-log.txt
+backend.log

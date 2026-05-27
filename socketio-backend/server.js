@@ -109,8 +109,8 @@ io.on("connection", function (socket) {
 
     logEntries.push(logEntry.trimEnd());
 
-    // Write to log.txt file
-    fs.appendFile(path.join(__dirname, "log.txt"), logEntry, function (err) {
+    // Write to backend.log file
+    fs.appendFile(path.join(__dirname, "backend.log"), logEntry, function (err) {
       if (err) {
         console.log("Error writing to log file:", err);
       }
@@ -132,8 +132,8 @@ io.on("connection", function (socket) {
 
     logEntries.push(logEntry.trimEnd());
 
-    // Write to log.txt file
-    fs.appendFile(path.join(__dirname, "log.txt"), logEntry, function (err) {
+    // Write to backend.log file
+    fs.appendFile(path.join(__dirname, "backend.log"), logEntry, function (err) {
       if (err) {
         console.log("Error writing tx to log file:", err);
       }
@@ -163,7 +163,7 @@ io.on("connection", function (socket) {
   // Clear only the system log file on disk (used by "Clear System Logs")
   socket.on("clear_system", function () {
     try {
-      fs.writeFileSync(path.join(__dirname, "log.txt"), "");
+      fs.writeFileSync(path.join(__dirname, "backend.log"), "");
       io.emit("system_cleared");
     } catch (err) {
       console.log("Error clearing system log file:", err);

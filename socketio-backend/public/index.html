@@ -44,9 +44,11 @@
                     send</span>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
                 <input id="txCodeInput" type="text" placeholder="Enter code (e.g. 123456)"
                     class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+                <button id="clearTxButton" type="button"
+                    class="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">Clear</button>
                 <button id="sendTxButton"
                     class="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">Send</button>
             </div>
@@ -157,6 +159,7 @@
 
         // Transmitter elements
         const txCodeInput = document.getElementById('txCodeInput');
+        const clearTxButton = document.getElementById('clearTxButton');
         const sendTxButton = document.getElementById('sendTxButton');
         const txHistoryDiv = document.getElementById('txHistory');
         const receivedCodesDiv = document.getElementById('receivedCodes');
@@ -670,6 +673,11 @@
             const code = txCodeInput.value.trim();
             if (!code) return alert('Enter a code to send');
             sendCode(code);
+        });
+
+        clearTxButton.addEventListener('click', () => {
+            txCodeInput.value = '';
+            txCodeInput.focus();
         });
 
         txCodeInput.addEventListener('keydown', (e) => {

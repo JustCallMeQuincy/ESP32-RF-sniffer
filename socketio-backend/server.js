@@ -205,9 +205,12 @@ io.on("connection", function (socket) {
     io.emit("clear");
   });
 
-  // Clear only the system log file on disk (used by "Clear System Logs")
+  // Clear the system log file on disk and the in-memory session buffer
+  // (used by "Clear System Logs")
   socket.on("clear_system", function () {
     try {
+      logEntries.length = 0;
+      io.emit("clear");
       fs.writeFileSync(path.join(__dirname, "backend.log"), "");
       io.emit("system_cleared");
     } catch (err) {

@@ -58,7 +58,6 @@ If you'd like to access the webpage from a different device;
 - Connecting multiple ESPs is not currently supported
 - There's no security setup (https, wss)
 - The repetition functionalities do not take the ESP hardware into account - extended use may overheat or crash the device
-- Currently, when refreshing the page - the last 20 logs are displayed. This is done to prevent bad performance or long loading times
 
 # Purpose
 This is a testing/demo tool, not meant for any purposes outside of educational context.

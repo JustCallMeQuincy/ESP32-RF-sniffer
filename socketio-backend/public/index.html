@@ -626,7 +626,7 @@
 
         function updateTransmitterStatus() {
             const isLagging = isEspLagging();
-            const isReady = frontendConnected && espConnected && !isLagging;
+            const isReady = isConnectionReady() && !isLagging;
             const isUnavailable = !isReady && !isLagging;
             txStatusBadge.textContent = isLagging ? 'ESP lagging' : isReady ? 'Ready to send' : 'Not ready to send';
             txStatusBadge.classList.toggle('bg-emerald-50', isReady);
@@ -635,6 +635,10 @@
             txStatusBadge.classList.toggle('text-rose-700', isUnavailable);
             txStatusBadge.classList.toggle('bg-amber-50', isLagging);
             txStatusBadge.classList.toggle('text-amber-700', isLagging);
+        }
+
+        function isConnectionReady() {
+            return frontendConnected && espConnected;
         }
 
         function isEspLagging() {
@@ -663,7 +667,35 @@
         }
 
         function updateSendControlStates() {
-            const disableSendButtons = isEspLagging();
+            const disableSendButtons = !isConnectionReady() || isEspLagging();
+
+            if (clearLogsButton) {
+                clearLogsButton.disabled = disableSendButtons;
+            }
+
+            if (clearTxButton) {
+                clearTxButton.disabled = disableSendButtons;
+            }
+
+            if (clearSystemButton) {
+                clearSystemButton.disabled = disableSendButtons;
+            }
+
+            if (bfModeRepeat) {
+                bfModeRepeat.disabled = disableSendButtons;
+            }
+
+            if (bfModeCycle) {
+                bfModeCycle.disabled = disableSendButtons;
+            }
+
+            if (bfCycleRestart) {
+                bfCycleRestart.disabled = disableSendButtons;
+            }
+
+            if (bfAutoPauseToggle) {
+                bfAutoPauseToggle.disabled = disableSendButtons;
+            }
 
             if (sendTxButton) {
                 sendTxButton.disabled = disableSendButtons;
@@ -679,7 +711,7 @@
         }
 
         function updateResendButtonStates() {
-            const disableResends = isEspLagging();
+            const disableResends = !isConnectionReady() || isEspLagging();
 
             document.querySelectorAll('.resend-received, .resend-log').forEach((button) => {
                 button.disabled = disableResends;
@@ -752,12 +784,12 @@
         }
 
         function shouldAutoPauseBruteForce() {
-            if (!isAutoPauseActive()) {
-                return false;
+            if (!isConnectionReady()) {
+                return true;
             }
 
-            if (!frontendConnected || !espConnected) {
-                return true;
+            if (!isAutoPauseActive()) {
+                return false;
             }
 
             return typeof espHeartbeatLagTicks === 'number' && espHeartbeatLagTicks >= HEARTBEAT_LAG_THRESHOLD_TICKS;
@@ -866,6 +898,20 @@
             }
 
             updateBruteForceCardUI();
+
+            if (!isConnectionReady()) {
+                if (bfRunning && !bfAutoPaused) {
+                    pauseBruteForceIfNeeded('Application or ESP32 disconnected. Auto-paused.');
+                }
+
+                if (bfAutoPaused && !hasPendingBruteForceRequest()) {
+                    bfLagStatus.className = 'mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 shadow-sm';
+                    bfLagStatus.textContent = 'Waiting for the Application and ESP32 to reconnect.';
+                }
+
+                updateSendControlStates();
+                return;
+            }
 
             const lagTicks = typeof espHeartbeatLagTicks === 'number' ? espHeartbeatLagTicks : null;
             const isLagging = isEspLagging();
@@ -1575,6 +1621,13 @@
         // --- Sending / brute-force ---
         function sendCode(code, options = {}) {
             if (!code) return;
+
+            if (!isConnectionReady()) {
+                if (options.showFeedback !== false) {
+                    showTxFeedback('Application or ESP32 is disconnected. Reconnect before sending.', 'warning');
+                }
+                return;
+            }
 
             if (options.source === 'brute-force') {
                 markBruteForceUsed();

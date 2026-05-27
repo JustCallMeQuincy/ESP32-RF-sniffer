@@ -125,10 +125,18 @@ io.on("connection", function (socket) {
 
   // Handle transmit requests from clients
   socket.on("tx", function (data) {
+    if (!data || data.code === undefined || data.code === null || String(data.code).trim() === "") {
+      socket.emit("tx_error", { message: "Invalid transmit request: missing code." });
+      return;
+    }
+
+    var normalizedCode = String(data.code).trim();
+    var clientRequestId = data.clientRequestId || null;
+
     // data expected: { code: <string|number>, meta?: {...} }
     console.log("Received tx from client:", socket.id, data);
     var timestamp = new Date().toISOString();
-    var logEntry = timestamp + " - " + JSON.stringify({ type: "tx", code: data.code, meta: data.meta || null }) + "\n";
+    var logEntry = timestamp + " - " + JSON.stringify({ type: "tx", code: normalizedCode, meta: data.meta || null }) + "\n";
 
     logEntries.push(logEntry.trimEnd());
 
@@ -142,16 +150,20 @@ io.on("connection", function (socket) {
     // Broadcast a rf_log event so all clients see the transmit
     io.emit("rf_log", {
       timestamp: timestamp,
-      data: { type: "tx", code: data.code, meta: data.meta || null }
+      data: { type: "tx", code: normalizedCode, meta: data.meta || null }
     });
 
     // Forward transmit command to connected clients (ESP32 devices)
-    io.emit("tx", { code: data.code, meta: data.meta || null });
+    io.emit("tx", { code: normalizedCode, meta: data.meta || null });
 
     // Optionally acknowledge sender
-    socket.emit("tx_ack", { timestamp: timestamp, code: data.code });
+    socket.emit("tx_ack", {
+      timestamp: timestamp,
+      code: normalizedCode,
+      clientRequestId: clientRequestId
+    });
 
-    console.log("Forwarded tx to clients:", data.code);
+    console.log("Forwarded tx to clients:", normalizedCode);
   });
 
   // Clear only the in-memory/session logs (used by "Clear Session Logs")

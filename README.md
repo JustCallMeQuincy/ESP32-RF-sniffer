@@ -56,7 +56,7 @@ DEBUG_PAYLOADS=1 node socketio-backend/server.js
 
 You can also set `DEBUG=true` as an alternative flag. When `DEBUG_PAYLOADS` is not set, the server will continue to emit heartbeat and ping logs but will suppress TX/RX payload console output.
 
-All RX and TX transmissions are logged in the `backend.log` file.
+RX and TX transmissions are always logged in the `backend.log` file, regardless of debug mode.
 
 ## Setup the ESP32
 1. Connect the wiring on the ESP32, following the wiring diagram below

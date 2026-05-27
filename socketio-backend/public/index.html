@@ -65,11 +65,15 @@
                     </div>
 
                     <div class="mt-2 flex gap-2">
-                        <input id="bfStart" type="text" placeholder="Start code"
-                            class="rounded-md border px-2 py-1 text-sm" />
-                        <div id="bfEndWrapper" class="flex-1">
-                            <input id="bfEnd" type="text" placeholder="End code"
+                        <div id="bfRepeatWrapper" class="flex-1">
+                            <input id="bfRepeat" type="text" placeholder="Code to repeat"
                                 class="w-full rounded-md border px-2 py-1 text-sm" />
+                        </div>
+                        <div id="bfCycleWrapper" class="flex flex-1 gap-2">
+                            <input id="bfStart" type="text" placeholder="Start code"
+                                class="w-1/2 rounded-md border px-2 py-1 text-sm" />
+                            <input id="bfEnd" type="text" placeholder="End code"
+                                class="w-1/2 rounded-md border px-2 py-1 text-sm" />
                         </div>
                     </div>
 
@@ -131,9 +135,11 @@
         const transmittedTotalCount = document.getElementById('transmittedTotalCount');
         const bfMode = document.getElementById('bfMode');
         const bfRate = document.getElementById('bfRate');
+        const bfRepeat = document.getElementById('bfRepeat');
         const bfStart = document.getElementById('bfStart');
         const bfEnd = document.getElementById('bfEnd');
-        const bfEndWrapper = document.getElementById('bfEndWrapper');
+        const bfRepeatWrapper = document.getElementById('bfRepeatWrapper');
+        const bfCycleWrapper = document.getElementById('bfCycleWrapper');
         const bfStartStop = document.getElementById('bfStartStop');
         const bfStep = document.getElementById('bfStep');
 
@@ -196,10 +202,10 @@
 
         function updateBruteForceModeUI() {
             const isRepeatMode = bfMode.value === 'repeat';
-            bfEndWrapper.classList.toggle('hidden', isRepeatMode);
+            bfRepeatWrapper.classList.toggle('hidden', !isRepeatMode);
+            bfCycleWrapper.classList.toggle('hidden', isRepeatMode);
             bfStep.classList.toggle('hidden', isRepeatMode);
             bfStep.disabled = isRepeatMode;
-            bfStart.placeholder = isRepeatMode ? 'Code to repeat' : 'Start code';
         }
 
         // --- Log loading ---
@@ -583,7 +589,7 @@
             const rate = Math.max(1, parseInt(bfRate.value) || 50);
 
             if (mode === 'repeat') {
-                const code = bfStart.value.trim();
+                const code = bfRepeat.value.trim();
                 if (!code) return alert('Enter a code to repeat');
                 bfInterval = setInterval(() => sendCode(code, false), rate);
             } else {

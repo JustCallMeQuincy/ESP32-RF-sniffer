@@ -4,11 +4,14 @@
 // 2. Rename this file to config.h
 // -------------------------------
 
-const char *ssid = ""; // Your WiFi SSID
-const char *password = ""; // Your WiFi password
+// Network connection settings
+const char *ssid = ""; // Network SSID
+const char *password = ""; // Network connection password
 const char *host = ""; // The IP address of the machine running the web application (internal IP address)
 
-const uint16_t port = 8890;         // port for your socket.io server
+// Port to run the web application and back-end server on
+const uint16_t port = 8890; // Default: 8890
 
-// Transmit pin for the TX functionality. Set to -1 to disable transmit functionality.
+// Pins used for the RF modules. Set to -1 to disable receive functionality.
+const int rxPin = 13; // Default: 13  -> (GPIO13)
 const int txPin = 4; // Default: 4  → (GPIO4)

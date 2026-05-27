@@ -21,7 +21,6 @@ bool displayAvailable = false;
 // buffer for the oled message
 char messageBuffer[256];
 
-#define pinReceiver 13
 #define pinLed 2
 
 #define DEFAULT_TX_BITLENGTH 24
@@ -301,7 +300,16 @@ void setup()
     }
 
     pinMode(pinLed, OUTPUT);
-    mySwitch.enableReceive(pinReceiver);
+
+    if (rxPin >= 0)
+    {
+        mySwitch.enableReceive(rxPin);
+        Serial.printf("Receiver enabled on pin %d\n", rxPin);
+    }
+    else
+    {
+        Serial.println("Receiver disabled (rxPin < 0)");
+    }
 
     // enable transmitter if configured
     if (txPin >= 0)

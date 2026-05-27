@@ -32,53 +32,85 @@
         </div>
 
         <!-- Transmitter controls -->
-        <div id="transmitter" class="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 class="mb-2 text-lg font-semibold">Transmitter</h2>
-
-            <div class="flex gap-2">
-                <input id="txCodeInput" type="text" placeholder="Enter code (e.g. 123456)"
-                    class="w-2/3 rounded-md border px-3 py-2 text-sm" />
-                <button id="sendTxButton"
-                    class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Send</button>
+        <div id="transmitter"
+            class="mb-4 rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm ring-1 ring-slate-900/5">
+            <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900">Transmitter</h2>
+                    <p class="text-xs text-slate-500">Send codes or run repeat and cycle routines from one place.</p>
+                </div>
+                <span id="txStatusBadge"
+                    class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Not ready to
+                    send</span>
             </div>
 
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <div class="mb-1 font-semibold">History (click to reuse)</div>
-                    <div id="txHistory" class="max-h-32 overflow-y-auto rounded-sm border bg-slate-50 p-2 text-sm">
+            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                <input id="txCodeInput" type="text" placeholder="Enter code (e.g. 123456)"
+                    class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+                <button id="sendTxButton"
+                    class="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">Send</button>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div class="h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <div class="font-semibold text-slate-900">History</div>
+                        <div class="text-xs text-slate-500">Click an entry to reuse it</div>
+                    </div>
+                    <div id="txHistory"
+                        class="min-h-32 max-h-36 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-2 text-sm">
                     </div>
                 </div>
 
-                <div>
-                    <div class="mb-1 font-semibold">Brute-force / Repeat</div>
-                    <div class="flex gap-2">
-                        <select id="bfMode" class="rounded-md border px-2 py-1 text-sm">
-                            <option value="repeat">Repeat single</option>
-                            <option value="cycle">Cycle range</option>
-                        </select>
+                <div class="h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <div class="font-semibold text-slate-900">Brute-force / Repeat</div>
+                        <div class="text-xs text-slate-500">Adjust rate and mode</div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input id="bfMode" type="hidden" value="repeat" />
+                        <div class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 shadow-sm"
+                            role="tablist" aria-label="Brute-force mode">
+                            <button id="bfModeRepeat" type="button"
+                                class="rounded-md px-3 py-1 text-sm font-semibold transition" aria-pressed="true">Repeat
+                                single</button>
+                            <button id="bfModeCycle" type="button"
+                                class="rounded-md px-3 py-1 text-sm font-semibold transition" aria-pressed="false">Cycle
+                                range</button>
+                        </div>
                         <input id="bfRate" type="number" value="50" min="1"
-                            class="w-24 rounded-md border px-2 py-1 text-sm" />
-                        <span class="text-sm self-center">ms</span>
+                            class="w-24 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
+                        <span class="text-sm text-slate-500">ms</span>
                     </div>
 
-                    <div class="mt-2 flex gap-2">
+                    <div class="mt-3 flex gap-2">
                         <div id="bfRepeatWrapper" class="flex-1">
                             <input id="bfRepeat" type="text" placeholder="Code to repeat"
-                                class="w-full rounded-md border px-2 py-1 text-sm" />
+                                class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
                         </div>
                         <div id="bfCycleWrapper" class="flex flex-1 gap-2">
-                            <input id="bfStart" type="text" placeholder="Start code"
-                                class="w-1/2 rounded-md border px-2 py-1 text-sm" />
-                            <input id="bfEnd" type="text" placeholder="End code"
-                                class="w-1/2 rounded-md border px-2 py-1 text-sm" />
+                            <div class="flex flex-1 gap-2">
+                                <input id="bfStart" type="text" placeholder="Start code"
+                                    class="w-1/2 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
+                                <input id="bfEnd" type="text" placeholder="End code"
+                                    class="w-1/2 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
+                            </div>
+                            <button id="bfCycleRestart" type="button" title="Restart cycle from the start code"
+                                class="hidden inline-flex h-8 w-8 flex-none items-center justify-center rounded-md border border-slate-300 bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"
+                                    stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">
+                                    <path d="M5.5 8.5A6 6 0 1 1 4.8 12" />
+                                    <path d="M5 5v4h4" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
                     <div class="mt-3 flex gap-2">
                         <button id="bfStartStop"
-                            class="rounded-md bg-amber-600 px-3 py-1 text-sm font-semibold text-white hover:bg-amber-700">Start</button>
+                            class="rounded-md bg-amber-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700">Start</button>
                         <button id="bfStep"
-                            class="rounded-md bg-slate-600 px-3 py-1 text-sm font-semibold text-white hover:bg-slate-700">Step</button>
+                            class="rounded-md bg-slate-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700">Step</button>
                     </div>
                 </div>
             </div>
@@ -120,6 +152,7 @@
         const frontendUptime = document.getElementById('frontendUptime');
         const espStatusBadge = document.getElementById('espStatusBadge');
         const espUptime = document.getElementById('espUptime');
+        const txStatusBadge = document.getElementById('txStatusBadge');
         const clearLogsButton = document.getElementById('clearLogsButton');
 
         // Transmitter elements
@@ -130,12 +163,15 @@
         const receivedTotalCount = document.getElementById('receivedTotalCount');
         const transmittedTotalCount = document.getElementById('transmittedTotalCount');
         const bfMode = document.getElementById('bfMode');
+        const bfModeRepeat = document.getElementById('bfModeRepeat');
+        const bfModeCycle = document.getElementById('bfModeCycle');
         const bfRate = document.getElementById('bfRate');
         const bfRepeat = document.getElementById('bfRepeat');
         const bfStart = document.getElementById('bfStart');
         const bfEnd = document.getElementById('bfEnd');
         const bfRepeatWrapper = document.getElementById('bfRepeatWrapper');
         const bfCycleWrapper = document.getElementById('bfCycleWrapper');
+        const bfCycleRestart = document.getElementById('bfCycleRestart');
         const bfStartStop = document.getElementById('bfStartStop');
         const bfStep = document.getElementById('bfStep');
 
@@ -171,13 +207,29 @@
         function updateConnectionBanner() {
             setStatusRow(frontendStatusBadge, frontendUptime, frontendConnected, frontendConnectedAt);
             setStatusRow(espStatusBadge, espUptime, espConnected, espConnectedAt);
+            updateTransmitterStatus();
+        }
+
+        function updateTransmitterStatus() {
+            const isReady = frontendConnected && espConnected;
+            txStatusBadge.textContent = isReady ? 'Ready to send' : 'Not ready to send';
+            txStatusBadge.classList.toggle('bg-emerald-50', isReady);
+            txStatusBadge.classList.toggle('text-emerald-700', isReady);
+            txStatusBadge.classList.toggle('bg-rose-50', !isReady);
+            txStatusBadge.classList.toggle('text-rose-700', !isReady);
         }
 
         setInterval(() => {
             updateConnectionBanner();
         }, 1000);
 
-        bfMode.addEventListener('change', updateBruteForceModeUI);
+        bfModeRepeat.addEventListener('click', () => setBruteForceMode('repeat'));
+        bfModeCycle.addEventListener('click', () => setBruteForceMode('cycle'));
+
+        function setBruteForceMode(mode) {
+            bfMode.value = mode;
+            updateBruteForceModeUI();
+        }
 
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
@@ -202,6 +254,24 @@
             bfCycleWrapper.classList.toggle('hidden', isRepeatMode);
             bfStep.classList.toggle('hidden', isRepeatMode);
             bfStep.disabled = isRepeatMode;
+            updateCycleRestartButtonUI();
+            bfModeRepeat.classList.toggle('bg-slate-900', isRepeatMode);
+            bfModeRepeat.classList.toggle('text-white', isRepeatMode);
+            bfModeRepeat.classList.toggle('bg-transparent', !isRepeatMode);
+            bfModeRepeat.classList.toggle('text-slate-600', !isRepeatMode);
+            bfModeCycle.classList.toggle('bg-slate-900', !isRepeatMode);
+            bfModeCycle.classList.toggle('text-white', !isRepeatMode);
+            bfModeCycle.classList.toggle('bg-transparent', isRepeatMode);
+            bfModeCycle.classList.toggle('text-slate-600', isRepeatMode);
+            bfModeRepeat.setAttribute('aria-pressed', String(isRepeatMode));
+            bfModeCycle.setAttribute('aria-pressed', String(!isRepeatMode));
+        }
+
+        function updateCycleRestartButtonUI() {
+            const isCycleMode = bfMode.value === 'cycle';
+            const start = parseInt(bfStart.value);
+            const shouldShow = isCycleMode && bfCurrent !== null && !Number.isNaN(start) && bfCurrent !== start;
+            bfCycleRestart.classList.toggle('hidden', !shouldShow);
         }
 
         // --- Log loading ---
@@ -614,10 +684,12 @@
                 const end = parseInt(bfEnd.value);
                 if (Number.isNaN(start) || Number.isNaN(end)) return alert('Enter valid start and end numeric codes');
                 bfCurrent = start;
+                updateCycleRestartButtonUI();
                 bfInterval = setInterval(() => {
                     sendCode(String(bfCurrent), false);
                     bfCurrent++;
                     if (bfCurrent > end) bfCurrent = start;
+                    updateCycleRestartButtonUI();
                 }, rate);
             }
             bfStartStop.textContent = 'Stop';
@@ -651,7 +723,16 @@
                 sendCode(String(bfCurrent), false);
                 bfCurrent++;
                 if (bfCurrent > end) bfCurrent = start;
+                updateCycleRestartButtonUI();
             }
+        });
+
+        bfCycleRestart.addEventListener('click', () => {
+            if (bfMode.value !== 'cycle') return;
+            const start = parseInt(bfStart.value);
+            if (Number.isNaN(start)) return alert('Enter a valid start numeric code');
+            bfCurrent = start;
+            updateCycleRestartButtonUI();
         });
 
         function escapeHtml(text) {

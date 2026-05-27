@@ -226,6 +226,9 @@
                 </span>
                 <span id="espUptime" class="text-xs font-normal text-slate-500"></span>
             </div>
+            <div id="connectionLagWarning"
+                class="mt-3 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm"
+                role="status" aria-live="polite"></div>
         </div>
 
         <!-- Transmitter controls -->
@@ -246,7 +249,7 @@
                 <button id="clearTxButton" type="button"
                     class="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">Clear</button>
                 <button id="sendTxButton"
-                    class="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">Send</button>
+                    class="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Send</button>
             </div>
 
             <div id="txFeedback"
@@ -329,9 +332,9 @@
 
                     <div class="mt-3 flex gap-2">
                         <button id="bfStartStop"
-                            class="rounded-md bg-emerald-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">Start</button>
+                            class="rounded-md bg-emerald-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Start</button>
                         <button id="bfStep"
-                            class="rounded-md bg-slate-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700">Step</button>
+                            class="rounded-md bg-slate-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-600">Step</button>
                     </div>
 
                     <div id="bfRateWarning"
@@ -402,6 +405,7 @@
         const espStatusBadge = document.getElementById('espStatusBadge');
         const espUptime = document.getElementById('espUptime');
         const txStatusBadge = document.getElementById('txStatusBadge');
+        const connectionLagWarning = document.getElementById('connectionLagWarning');
         const clearLogsButton = document.getElementById('clearLogsButton');
         const themeToggleButton = document.getElementById('themeToggleButton');
         const themeToggleIconLight = document.getElementById('themeToggleIconLight');
@@ -498,7 +502,10 @@
         let espLastHeartbeatAt = null;
         let espHeartbeatLagTicks = null;
         let espResponseTimeMs = null;
+        let bfUsedPreviously = false;
+        let bfUsedPreviouslyTimeoutId = null;
         const TX_ACK_TIMEOUT_MS = 4000;
+        const BRUTE_FORCE_USED_TIMEOUT_MS = 30000;
         const HEARTBEAT_INTERVAL_MS = 1000;
         const HEARTBEAT_LAG_THRESHOLD_TICKS = 5;
         const HEARTBEAT_RESUME_THRESHOLD_TICKS = 2;
@@ -584,7 +591,10 @@
             setStatusRow(frontendStatusBadge, frontendUptime, frontendConnected, frontendConnectedAt, backendResponseTimeMs);
             setStatusRow(espStatusBadge, espUptime, espConnected, espConnectedAt, espResponseTimeMs);
             updateTransmitterStatus();
+            updateConnectionLagWarning();
             updateBruteForceLagStatus();
+            updateSendControlStates();
+            updateResendButtonStates();
         }
 
         function stopBackendPingMonitor() {
@@ -615,12 +625,65 @@
         }
 
         function updateTransmitterStatus() {
-            const isReady = frontendConnected && espConnected;
-            txStatusBadge.textContent = isReady ? 'Ready to send' : 'Not ready to send';
+            const isLagging = isEspLagging();
+            const isReady = frontendConnected && espConnected && !isLagging;
+            const isUnavailable = !isReady && !isLagging;
+            txStatusBadge.textContent = isLagging ? 'ESP lagging' : isReady ? 'Ready to send' : 'Not ready to send';
             txStatusBadge.classList.toggle('bg-emerald-50', isReady);
             txStatusBadge.classList.toggle('text-emerald-700', isReady);
-            txStatusBadge.classList.toggle('bg-rose-50', !isReady);
-            txStatusBadge.classList.toggle('text-rose-700', !isReady);
+            txStatusBadge.classList.toggle('bg-rose-50', isUnavailable);
+            txStatusBadge.classList.toggle('text-rose-700', isUnavailable);
+            txStatusBadge.classList.toggle('bg-amber-50', isLagging);
+            txStatusBadge.classList.toggle('text-amber-700', isLagging);
+        }
+
+        function isEspLagging() {
+            return espConnected && typeof espHeartbeatLagTicks === 'number' && espHeartbeatLagTicks >= HEARTBEAT_LAG_THRESHOLD_TICKS;
+        }
+
+        function updateConnectionLagWarning() {
+            if (!statusElement || !connectionLagWarning) {
+                return;
+            }
+
+            const lagTicks = typeof espHeartbeatLagTicks === 'number' ? espHeartbeatLagTicks : null;
+            const showWarning = isEspLagging() && !bfUsedPreviously;
+
+            statusElement.classList.toggle('border-amber-300', showWarning);
+            statusElement.classList.toggle('bg-amber-50/80', showWarning);
+
+            if (!showWarning || lagTicks === null) {
+                connectionLagWarning.textContent = '';
+                connectionLagWarning.classList.add('hidden');
+                return;
+            }
+
+            connectionLagWarning.textContent = `ESP is ${lagTicks} ticks behind expected. Sending is paused until it recovers.`;
+            connectionLagWarning.classList.remove('hidden');
+        }
+
+        function updateSendControlStates() {
+            const disableSendButtons = isEspLagging();
+
+            if (sendTxButton) {
+                sendTxButton.disabled = disableSendButtons;
+            }
+
+            if (bfStep) {
+                bfStep.disabled = disableSendButtons || bfMode.value === 'repeat';
+            }
+
+            if (bfStartStop) {
+                bfStartStop.disabled = disableSendButtons && !bfRunning;
+            }
+        }
+
+        function updateResendButtonStates() {
+            const disableResends = isEspLagging();
+
+            document.querySelectorAll('.resend-received, .resend-log').forEach((button) => {
+                button.disabled = disableResends;
+            });
         }
 
         function updateBruteForceStartStopButtonUI() {
@@ -707,6 +770,21 @@
             }
         }
 
+        function markBruteForceUsed() {
+            bfUsedPreviously = true;
+            updateConnectionLagWarning();
+
+            if (bfUsedPreviouslyTimeoutId) {
+                clearTimeout(bfUsedPreviouslyTimeoutId);
+            }
+
+            bfUsedPreviouslyTimeoutId = setTimeout(() => {
+                bfUsedPreviously = false;
+                bfUsedPreviouslyTimeoutId = null;
+                updateConnectionLagWarning();
+            }, BRUTE_FORCE_USED_TIMEOUT_MS);
+        }
+
         function pauseBruteForceIfNeeded(message) {
             if (!bfRunning || bfAutoPaused) {
                 return;
@@ -783,26 +861,14 @@
 
         function updateBruteForceLagStatus() {
             if (!bfLagStatus) {
+                updateSendControlStates();
                 return;
             }
 
             updateBruteForceCardUI();
 
             const lagTicks = typeof espHeartbeatLagTicks === 'number' ? espHeartbeatLagTicks : null;
-
-            if (lagTicks === null) {
-                if (bfAutoPaused && !hasPendingBruteForceRequest()) {
-                    maybeResumeBruteForce();
-                }
-
-                if (!bfAutoPaused) {
-                    bfLagStatus.className = 'mt-3 hidden rounded-md border px-3 py-2 text-xs font-semibold shadow-sm';
-                    bfLagStatus.textContent = '';
-                }
-                return;
-            }
-
-            const isLagging = lagTicks >= HEARTBEAT_LAG_THRESHOLD_TICKS;
+            const isLagging = isEspLagging();
 
             if (!isLagging) {
                 if (bfAutoPaused && !hasPendingBruteForceRequest()) {
@@ -816,6 +882,15 @@
                     bfLagStatus.className = 'mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 shadow-sm';
                     bfLagStatus.textContent = 'Waiting for the last brute-force send to finish before resuming.';
                 }
+
+                updateSendControlStates();
+                return;
+            }
+
+            if (!bfUsedPreviously) {
+                bfLagStatus.className = 'mt-3 hidden rounded-md border px-3 py-2 text-xs font-semibold shadow-sm';
+                bfLagStatus.textContent = '';
+                updateSendControlStates();
                 return;
             }
 
@@ -831,6 +906,8 @@
             bfLagStatus.textContent = isAutoPauseActive()
                 ? `ESP is ${lagTicks} ticks behind expected.`
                 : `ESP is ${lagTicks} ticks behind expected. Auto-pause is off.`;
+
+            updateSendControlStates();
         }
 
         function hideTxFeedback() {
@@ -991,7 +1068,6 @@
             bfRepeatWrapper.classList.toggle('hidden', !isRepeatMode);
             bfCycleWrapper.classList.toggle('hidden', isRepeatMode);
             bfStep.classList.toggle('hidden', isRepeatMode);
-            bfStep.disabled = isRepeatMode;
             updateCycleRestartButtonUI();
             bfModeRepeat.classList.toggle('bg-slate-900', isRepeatMode);
             bfModeRepeat.classList.toggle('text-white', isRepeatMode);
@@ -1003,6 +1079,7 @@
             bfModeCycle.classList.toggle('text-slate-600', isRepeatMode);
             bfModeRepeat.setAttribute('aria-pressed', String(isRepeatMode));
             bfModeCycle.setAttribute('aria-pressed', String(!isRepeatMode));
+            updateSendControlStates();
         }
 
         function updateCycleRestartButtonUI() {
@@ -1385,11 +1462,16 @@
                     </div>
                     <div class="mt-3 flex items-center justify-between gap-2 text-xs text-slate-500">
                         <span>Last seen: ${escapeHtml(entry.lastSeen)}</span>
-                        <button type="button" class="resend-received rounded-md bg-emerald-600 px-3 py-1 font-semibold text-white hover:bg-emerald-700">Resend</button>
+                        <button type="button" class="resend-received rounded-md bg-emerald-600 px-3 py-1 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Resend</button>
                     </div>
                 `;
 
-                    card.querySelector('.resend-received').addEventListener('click', () => {
+                    const resendButton = card.querySelector('.resend-received');
+                    resendButton.disabled = isEspLagging();
+                    resendButton.addEventListener('click', () => {
+                        if (resendButton.disabled) {
+                            return;
+                        }
                         txCodeInput.value = entry.code;
                         sendCode(entry.code);
                     });
@@ -1464,9 +1546,12 @@
 
                 const resendButton = document.createElement('button');
                 resendButton.type = 'button';
-                resendButton.className = 'rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700';
+                resendButton.className = 'resend-log rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600';
                 resendButton.textContent = 'Resend';
                 resendButton.addEventListener('click', () => {
+                    if (resendButton.disabled) {
+                        return;
+                    }
                     txCodeInput.value = code;
                     sendCode(code);
                 });
@@ -1490,6 +1575,10 @@
         // --- Sending / brute-force ---
         function sendCode(code, options = {}) {
             if (!code) return;
+
+            if (options.source === 'brute-force') {
+                markBruteForceUsed();
+            }
 
             const remember = options.remember !== false;
             const showFeedback = options.showFeedback !== false;
@@ -1558,6 +1647,7 @@
 
         function startBruteForce() {
             if (bfRunning) return;
+            markBruteForceUsed();
             const mode = bfMode.value;
             const rate = Math.max(1, parseInt(bfRate.value) || 50);
 
@@ -1624,6 +1714,7 @@
             if (mode === 'repeat') {
                 return;
             } else {
+                markBruteForceUsed();
                 const start = parseInt(bfStart.value);
                 const end = parseInt(bfEnd.value);
                 if (Number.isNaN(start) || Number.isNaN(end)) return alert('Enter valid start and end numeric codes');

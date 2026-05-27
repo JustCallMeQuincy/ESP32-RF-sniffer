@@ -62,3 +62,26 @@ If you'd like to access the webpage from a different device;
 
 # Purpose
 This is a testing/demo tool, not meant for any purposes outside of educational context.
+
+# Possible additions
+## Display (OLED)
+This project optionally supports a small I2C OLED (SH1106) used to show short messages and the last received RF codes.
+
+- Driver: `Adafruit_SH1106` (used in `esp32-sniffer/src/main.cpp`).
+- I2C address: `0x3C` (defined as `i2C_ADDRESS` in the source).
+
+### Wiring
+(ESP32 common defaults)
+- `VCC` -> `3.3V`
+- `GND` -> `GND`
+- `SDA` -> `GPIO 21` (ESP32 SDA)
+- `SCL` -> `GPIO 22` (ESP32 SCL)
+
+### Notes about the implementation
+- The firmware probes the I2C address at startup; if a device responds, the display is initialized and `displayAvailable` is set to true. Initialization occurs in `setup()`; see [esp32-sniffer/src/main.cpp (lines 280-296)](esp32-sniffer/src/main.cpp#L280-L296).
+- Use the helper `displayMessage(const char *messageBuffer)` to show short messages. Implementation: [esp32-sniffer/src/main.cpp (lines 117-136)](esp32-sniffer/src/main.cpp#L117-L136).
+- The helper `displayLastCodes()` draws the header and the last received codes kept in `codeHistory[]`. Implementation: [esp32-sniffer/src/main.cpp (lines 51-70)](esp32-sniffer/src/main.cpp#L51-L70). Codes are added by `addReceivedCodeToHistory()` near the top of the file.
+- On RF reception, the firmware updates the history and refreshes the OLED via `displayLastCodes()`; see the receive handling in `loop()`: [esp32-sniffer/src/main.cpp (lines 330-370)](esp32-sniffer/src/main.cpp#L330-L370).
+- The Socket.IO event handler can trigger display updates: it calls `displayMessage()` for remote `update` messages containing a `message`, clears the screen on `clear`, and briefly shows transmitted codes when handling `tx` requests. See socket handler: [esp32-sniffer/src/main.cpp (lines 140-240)](esp32-sniffer/src/main.cpp#L140-L240).
+
+If your display uses a different controller (e.g., SSD1306) you can either change the driver include or wire a compatible SH1106 module. The code will continue to run without an OLED if none is detected.

@@ -305,7 +305,12 @@
         </div>
 
         <div id="logContainer"
-            class="max-h-[55vh] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm"></div>
+            class="max-h-[55vh] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div id="logEmptyState"
+                class="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                No codes sniffed yet. Waiting for the ESP to catch the first one.
+            </div>
+        </div>
 
         <div class="mt-6">
             <div class="border border-rose-200 rounded-lg bg-rose-50 p-4">
@@ -480,6 +485,22 @@
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
 
+        function renderLogEmptyState() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = `
+                <div id="logEmptyState" class="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                    No codes sniffed yet. Waiting for the ESP to catch the first one.
+                </div>
+            `;
+        }
+
+        function clearLogEmptyState() {
+            const emptyState = document.getElementById('logEmptyState');
+            if (emptyState) {
+                emptyState.remove();
+            }
+        }
+
         function updateBruteForceModeUI() {
             const isRepeatMode = bfMode.value === 'repeat';
             bfRepeatWrapper.classList.toggle('hidden', !isRepeatMode);
@@ -515,6 +536,11 @@
                 .then(response => response.json())
                 .then(logs => {
                     const container = document.getElementById('logContainer');
+
+                    if (logs.length > 0) {
+                        clearLogEmptyState();
+                    }
+
                     logs.forEach(logLine => {
                         // Try to parse timestamp from the line (format: YYYY-MM-DDTHH:MM:SS.sssZ - ...)
                         const timestampMatch = logLine.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/);
@@ -576,8 +602,10 @@
             const parsedData = typeof logData.data === 'object' && logData.data !== null ? logData.data : parseLogData(data);
 
             if (isSniffedReceive(parsedData)) {
+                clearLogEmptyState();
                 registerReceivedCode(parsedData, timestamp, data);
             } else if (parsedData && parsedData.type === 'tx') {
+                clearLogEmptyState();
                 registerTransmittedCode();
             }
 
@@ -587,13 +615,13 @@
         });
 
         socket.on("clear", function () {
-            document.getElementById('logContainer').innerHTML = '';
+            renderLogEmptyState();
             resetReceivedPanel();
         });
 
         function clearLogs() {
             if (confirm('Are you sure you want to clear all logs?')) {
-                document.getElementById('logContainer').innerHTML = '';
+                renderLogEmptyState();
             }
         }
 

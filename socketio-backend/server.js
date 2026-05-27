@@ -6,6 +6,8 @@ const fs = require("fs");
 var helpers = require("./helpers");
 var port = 8890;
 
+const logEntries = [];
+
 const ESP_HEARTBEAT_INTERVAL_MS = 2000;
 const ESP_HEARTBEAT_TIMEOUT_MS = 6000;
 
@@ -60,23 +62,7 @@ app.get("/", function (req, res) {
 });
 
 app.get("/api/logs", function (req, res) {
-  const logFile = path.join(__dirname, "log.txt");
-
-  fs.readFile(logFile, 'utf8', function (err, data) {
-    if (err) {
-      if (err.code === 'ENOENT') {
-        // File doesn't exist yet
-        return res.json([]);
-      }
-      return res.status(500).json({ error: "Error reading log file" });
-    }
-
-    // Split by lines and get the last 20
-    const lines = data.trim().split('\n').filter(line => line.length > 0);
-    const lastLines = lines.slice(-20).reverse(); // Reverse so newest is first
-
-    res.json(lastLines);
-  });
+  res.json([...logEntries].reverse());
 });
 
 var http = require("http").createServer(app);
@@ -121,6 +107,8 @@ io.on("connection", function (socket) {
     var timestamp = new Date().toISOString();
     var logEntry = timestamp + " - " + JSON.stringify(data) + "\n";
 
+    logEntries.push(logEntry.trimEnd());
+
     // Write to log.txt file
     fs.appendFile(path.join(__dirname, "log.txt"), logEntry, function (err) {
       if (err) {
@@ -141,6 +129,8 @@ io.on("connection", function (socket) {
     console.log("Received tx from client:", socket.id, data);
     var timestamp = new Date().toISOString();
     var logEntry = timestamp + " - " + JSON.stringify({ type: "tx", code: data.code, meta: data.meta || null }) + "\n";
+
+    logEntries.push(logEntry.trimEnd());
 
     // Write to log.txt file
     fs.appendFile(path.join(__dirname, "log.txt"), logEntry, function (err) {
@@ -165,6 +155,15 @@ io.on("connection", function (socket) {
   });
 
   socket.on("clear", function () {
+    logEntries.length = 0;
+
+    try {
+      fs.writeFileSync(path.join(__dirname, "log.txt"), "");
+    } catch (err) {
+      console.log("Error clearing log file:", err);
+      return;
+    }
+
     io.emit("clear");
   });
 

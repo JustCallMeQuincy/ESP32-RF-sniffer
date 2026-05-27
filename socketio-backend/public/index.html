@@ -344,7 +344,8 @@
 
     <script src="lib/socket.io.min.js"></script>
     <script>
-        const socket = io({ query: { clientRole: 'web' } }); // identify the browser client to the backend
+        const backendBaseUrl = window.location.protocol === 'file:' ? 'http://localhost:8890' : window.location.origin;
+        const socket = io(backendBaseUrl, { query: { clientRole: 'web' } }); // identify the browser client to the backend
         const statusElement = document.getElementById('status');
         const frontendStatusBadge = document.getElementById('frontendStatusBadge');
         const frontendUptime = document.getElementById('frontendUptime');
@@ -428,10 +429,16 @@
 
         let frontendConnected = false;
         let frontendConnectedAt = null;
+        let backendResponseTimeMs = null;
         let espConnected = false;
         let espConnectedAt = null;
+        let espResponseTimeMs = null;
         const TX_ACK_TIMEOUT_MS = 4000;
         const pendingTxRequests = new Map();
+        const BACKEND_PING_INTERVAL_MS = 5000;
+        const pendingBackendPings = new Map();
+        let backendPingIntervalId = null;
+        let backendPingSequence = 0;
         let txFeedbackState = null;
         let txFeedbackRelativeInfo = null;
         const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, {
@@ -452,19 +459,87 @@
             return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
         }
 
-        function setStatusRow(badgeElement, uptimeElement, isConnected, connectedAt) {
+        function formatResponseTime(milliseconds) {
+            if (milliseconds === null || milliseconds === undefined) {
+                return '';
+            }
+
+            return `${Math.max(0, Math.round(milliseconds))} ms`;
+        }
+
+        function getResponseTimeChipClasses(milliseconds) {
+            if (milliseconds === null || milliseconds === undefined) {
+                return 'bg-sky-100 text-sky-700 ring-sky-200';
+            }
+
+            if (milliseconds < 100) {
+                return 'bg-emerald-100 text-emerald-700 ring-emerald-200';
+            }
+
+            if (milliseconds < 250) {
+                return 'bg-sky-100 text-sky-700 ring-sky-200';
+            }
+
+            if (milliseconds < 500) {
+                return 'bg-amber-100 text-amber-700 ring-amber-200';
+            }
+
+            return 'bg-rose-100 text-rose-700 ring-rose-200';
+        }
+
+        function setStatusRow(badgeElement, uptimeElement, isConnected, connectedAt, responseTimeMs) {
             badgeElement.textContent = isConnected ? 'Connected' : 'Disconnected';
             badgeElement.classList.toggle('bg-emerald-100', isConnected);
             badgeElement.classList.toggle('text-emerald-800', isConnected);
             badgeElement.classList.toggle('bg-rose-100', !isConnected);
             badgeElement.classList.toggle('text-rose-800', !isConnected);
-            uptimeElement.textContent = isConnected && connectedAt !== null ? `Connected for ${formatUptime(Date.now() - connectedAt)}` : '';
+
+            if (!isConnected || connectedAt === null) {
+                uptimeElement.textContent = '';
+                return;
+            }
+
+            const details = [`Connected for ${formatUptime(Date.now() - connectedAt)}`];
+            const responseTimeLabel = formatResponseTime(responseTimeMs);
+            if (responseTimeLabel) {
+                const chipClasses = getResponseTimeChipClasses(responseTimeMs);
+                details.push(`<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${chipClasses}">${responseTimeLabel}</span>`);
+            }
+
+            uptimeElement.innerHTML = details.join(' • ');
         }
 
         function updateConnectionBanner() {
-            setStatusRow(frontendStatusBadge, frontendUptime, frontendConnected, frontendConnectedAt);
-            setStatusRow(espStatusBadge, espUptime, espConnected, espConnectedAt);
+            setStatusRow(frontendStatusBadge, frontendUptime, frontendConnected, frontendConnectedAt, backendResponseTimeMs);
+            setStatusRow(espStatusBadge, espUptime, espConnected, espConnectedAt, espResponseTimeMs);
             updateTransmitterStatus();
+        }
+
+        function stopBackendPingMonitor() {
+            if (backendPingIntervalId !== null) {
+                clearInterval(backendPingIntervalId);
+                backendPingIntervalId = null;
+            }
+
+            pendingBackendPings.clear();
+            backendResponseTimeMs = null;
+        }
+
+        function sendBackendPing() {
+            if (!socket.connected) {
+                return;
+            }
+
+            const requestId = `backend-${Date.now()}-${backendPingSequence++}`;
+            const sentAtMs = Date.now();
+            pendingBackendPings.set(requestId, sentAtMs);
+            socket.emit('backend_ping', { requestId, sentAtMs });
+        }
+
+        function startBackendPingMonitor() {
+            stopBackendPingMonitor();
+            sendBackendPing();
+            backendPingIntervalId = setInterval(sendBackendPing, BACKEND_PING_INTERVAL_MS);
         }
 
         function updateTransmitterStatus() {
@@ -659,7 +734,7 @@
             updateBruteForceModeUI();
             resetReceivedPanel();
 
-            fetch('/api/logs')
+            fetch(`${backendBaseUrl}/api/logs`)
                 .then(response => response.json())
                 .then(logs => {
                     const container = document.getElementById('logContainer');
@@ -694,14 +769,19 @@
         socket.on("connect", function () {
             frontendConnected = true;
             frontendConnectedAt = Date.now();
+            backendResponseTimeMs = null;
+            startBackendPingMonitor();
             updateConnectionBanner();
         });
 
         socket.on("disconnect", function () {
             frontendConnected = false;
             frontendConnectedAt = null;
+            backendResponseTimeMs = null;
             espConnected = false;
             espConnectedAt = null;
+            espResponseTimeMs = null;
+            stopBackendPingMonitor();
             clearPendingTxRequests('Connection lost before transmit confirmation.', 'warning');
             updateConnectionBanner();
         });
@@ -721,7 +801,26 @@
             if (Number.isNaN(espConnectedAt)) {
                 espConnectedAt = null;
             }
+            espResponseTimeMs = status && typeof status.responseTimeMs === 'number' ? status.responseTimeMs : null;
             updateConnectionBanner();
+        });
+
+        socket.on('backend_pong', function (payload) {
+            const requestId = payload && payload.requestId ? payload.requestId : null;
+            const sentAtMs = requestId && pendingBackendPings.has(requestId)
+                ? pendingBackendPings.get(requestId)
+                : payload && typeof payload.sentAtMs === 'number'
+                    ? payload.sentAtMs
+                    : null;
+
+            if (requestId) {
+                pendingBackendPings.delete(requestId);
+            }
+
+            if (sentAtMs !== null) {
+                backendResponseTimeMs = Math.max(0, Date.now() - sentAtMs);
+                updateConnectionBanner();
+            }
         });
 
         socket.on("rf_log", function (logData) {

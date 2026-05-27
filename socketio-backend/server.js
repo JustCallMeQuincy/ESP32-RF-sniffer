@@ -8,8 +8,8 @@ var port = 8890;
 
 const logEntries = [];
 
-const ESP_HEARTBEAT_INTERVAL_MS = 2000;
-const ESP_HEARTBEAT_TIMEOUT_MS = 6000;
+const ESP_HEARTBEAT_INTERVAL_MS = 1000;
+const ESP_HEARTBEAT_TIMEOUT_MS = 4000;
 
 const frontendConnectionState = {
   socketIds: new Set(),
@@ -19,7 +19,9 @@ const frontendConnectionState = {
 const espConnectionState = {
   socketId: null,
   connectedAt: null,
-  lastHeartbeatAt: null
+  lastHeartbeatAt: null,
+  lastHeartbeatSentAt: null,
+  responseTimeMs: null
 };
 
 function emitConnectionStatus(io) {
@@ -30,7 +32,8 @@ function emitConnectionStatus(io) {
 
   io.emit("esp_status", {
     connected: Boolean(espConnectionState.socketId),
-    connectedAt: espConnectionState.connectedAt
+    connectedAt: espConnectionState.connectedAt,
+    responseTimeMs: espConnectionState.responseTimeMs
   });
 }
 
@@ -50,10 +53,21 @@ function clearEspConnection() {
   espConnectionState.socketId = null;
   espConnectionState.connectedAt = null;
   espConnectionState.lastHeartbeatAt = null;
+  espConnectionState.lastHeartbeatSentAt = null;
+  espConnectionState.responseTimeMs = null;
 }
 
 let app = express();
 app.use(express.static(path.join(__dirname, "public")));
+app.use(function (req, res, next) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
@@ -66,7 +80,12 @@ app.get("/api/logs", function (req, res) {
 });
 
 var http = require("http").createServer(app);
-var io = require("socket.io")(http);
+var io = require("socket.io")(http, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 
 io.on("connection", function (socket) {
   var connId = false;
@@ -166,6 +185,14 @@ io.on("connection", function (socket) {
     console.log("Forwarded tx to clients:", normalizedCode);
   });
 
+  socket.on("backend_ping", function (data) {
+    socket.emit("backend_pong", {
+      requestId: data && data.requestId ? data.requestId : null,
+      sentAtMs: data && typeof data.sentAtMs === "number" ? data.sentAtMs : null,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Clear only the in-memory/session logs (used by "Clear Session Logs")
   socket.on("clear", function () {
     logEntries.length = 0;
@@ -184,6 +211,10 @@ io.on("connection", function (socket) {
 
   socket.on("esp_heartbeat_ack", function () {
     if (!isFrontendClient(socket)) {
+      const now = Date.now();
+      if (espConnectionState.lastHeartbeatSentAt) {
+        espConnectionState.responseTimeMs = now - espConnectionState.lastHeartbeatSentAt;
+      }
       markEspHeartbeat(socket);
       emitConnectionStatus(io);
     }
@@ -220,8 +251,10 @@ setInterval(function () {
 
   for (const socket of io.sockets.sockets.values()) {
     if (!isFrontendClient(socket)) {
+      espConnectionState.lastHeartbeatSentAt = Date.now();
       socket.emit("esp_heartbeat", {
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        sentAtMs: espConnectionState.lastHeartbeatSentAt
       });
     }
   }

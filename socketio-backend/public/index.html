@@ -249,6 +249,8 @@
         socket.on("disconnect", function () {
             frontendConnected = false;
             frontendConnectedAt = null;
+            espConnected = false;
+            espConnectedAt = null;
             updateConnectionBanner();
         });
 

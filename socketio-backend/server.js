@@ -1,10 +1,10 @@
-var express = require("express");
+const express = require("express");
 const bodyParser = require("body-parser");
-let path = require("path");
+const path = require("path");
 const fs = require("fs");
 
-var helpers = require("./helpers");
-var port = 8890;
+const helpers = require("./helpers");
+const port = 8890;
 
 const logEntries = [];
 
@@ -63,7 +63,7 @@ function clearEspConnection() {
   espConnectionState.responseTimeMs = null;
 }
 
-let app = express();
+const app = express();
 app.use(express.static(path.join(__dirname, "public")));
 app.use(function (req, res, next) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -85,8 +85,8 @@ app.get("/api/logs", function (req, res) {
   res.json([...logEntries].reverse());
 });
 
-var http = require("http").createServer(app);
-var io = require("socket.io")(http, {
+const http = require("http").createServer(app);
+const io = require("socket.io")(http, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
@@ -94,7 +94,7 @@ var io = require("socket.io")(http, {
 });
 
 io.on("connection", function (socket) {
-  var connId = false;
+  let connId = false;
 
   if (socket.conn) {
     connId = socket.conn.id;
@@ -109,7 +109,7 @@ io.on("connection", function (socket) {
 
   emitConnectionStatus(io);
 
-  var message = "a client connected: " + connId;
+  const message = "a client connected: " + connId;
   helpers.logMessage("connect", message, connId);
 
   socket.on("disconnect", function (msg) {
@@ -124,13 +124,13 @@ io.on("connection", function (socket) {
 
     emitConnectionStatus(io);
 
-    var message = "a client disconnected: " + connId;
+    const message = "a client disconnected: " + connId;
     helpers.logMessage("disconnect", message, connId, msg);
   });
 
   socket.on("rf_log", function (data) {
-    var timestamp = new Date().toISOString();
-    var logEntry = timestamp + " - " + JSON.stringify(data) + "\n";
+    const timestamp = new Date().toISOString();
+    const logEntry = timestamp + " - " + JSON.stringify(data) + "\n";
 
     logEntries.push(logEntry.trimEnd());
 
@@ -155,13 +155,13 @@ io.on("connection", function (socket) {
       return;
     }
 
-    var normalizedCode = String(data.code).trim();
-    var clientRequestId = data.clientRequestId || null;
+    const normalizedCode = String(data.code).trim();
+    const clientRequestId = data.clientRequestId || null;
 
     // data expected: { code: <string|number>, meta?: {...} }
     console.log("Received tx from client:", socket.id, data);
-    var timestamp = new Date().toISOString();
-    var logEntry = timestamp + " - " + JSON.stringify({ type: "tx", code: normalizedCode, meta: data.meta || null }) + "\n";
+    const timestamp = new Date().toISOString();
+    const logEntry = timestamp + " - " + JSON.stringify({ type: "tx", code: normalizedCode, meta: data.meta || null }) + "\n";
 
     logEntries.push(logEntry.trimEnd());
 
@@ -230,20 +230,24 @@ io.on("connection", function (socket) {
     console.log(`Received event: ${event}`);
     console.log("With arguments:", args);
 
-    var payload = args;
+    let payload = args && args.length > 0 ? args[0] : null;
 
     try {
-      if (helpers.isJSONStringObject(args)) {
-        payload = JSON.parse(args);
+      if (typeof payload === "string" && helpers.isJSONStringObject(payload)) {
+        payload = JSON.parse(payload);
+      } else if (Array.isArray(payload) && payload.length > 0 && typeof payload[0] === "string" && helpers.isJSONStringObject(payload[0])) {
+        payload = JSON.parse(payload[0]);
+      } else if (typeof payload === "object" && payload !== null) {
+        // already an object - keep as-is
       } else {
-        payload = args[0];
+        // leave payload as-is (could be null, number, etc.)
       }
 
       console.log("Parsed payload:", payload);
 
     } catch (e) {
       console.log("Error parsing JSON:", e);
-      socket.emit(event, { message: "Error parsing message" }); // send error to sender
+      socket.emit(event, { message: "Error parsing message" });
     }
   });
 });

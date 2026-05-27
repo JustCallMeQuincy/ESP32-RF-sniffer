@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "watch": "nodemon ./server.js",
-    "start": "node ./server.js"
+    "start": "node ./server.js",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix"
   },
   "author": "Kurt Beheydt",
   "license": "ISC",
@@ -15,5 +17,8 @@
     "express": "^5.1.0",
     "json5": "^2.2.3",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.48.0"
   }
 }

@@ -47,5 +47,7 @@
 
 # User-specific configuration files (possible sensitive information)
 config.h
-.env
 backend.log
+.env
+.eslintignore
+.eslintrc.json

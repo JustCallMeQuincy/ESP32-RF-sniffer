@@ -70,7 +70,7 @@ void displayLastCodes()
 
 void emitRfLog(unsigned long receivedCode, unsigned int bitLength, unsigned int pulseDelay, unsigned int protocol)
 {
-    JsonDocument rfPayload = DynamicJsonDocument(256);
+    DynamicJsonDocument rfPayload(256);
     rfPayload[0] = "rf_log";
 
     JsonObject payload = rfPayload[1].to<JsonObject>();
@@ -80,14 +80,18 @@ void emitRfLog(unsigned long receivedCode, unsigned int bitLength, unsigned int 
     payload["protocol"] = protocol;
     payload["timestamp"] = millis();
 
-    String serialized;
-    serializeJson(rfPayload, serialized);
-    socketIO.sendEVENT(serialized);
+    // Serialize into a stack buffer to avoid heap allocations
+    char buf[512];
+    size_t written = serializeJson(rfPayload, buf, sizeof(buf));
+    if (written > 0)
+    {
+        socketIO.sendEVENT(buf);
+    }
 }
 
 void emitTxAck(unsigned long sentCode, unsigned int bitLength)
 {
-    JsonDocument txPayload = DynamicJsonDocument(128);
+    DynamicJsonDocument txPayload(128);
     txPayload[0] = "tx_ack";
 
     JsonObject payload = txPayload[1].to<JsonObject>();
@@ -95,22 +99,28 @@ void emitTxAck(unsigned long sentCode, unsigned int bitLength)
     payload["bitlength"] = bitLength;
     payload["timestamp"] = millis();
 
-    String serialized;
-    serializeJson(txPayload, serialized);
-    socketIO.sendEVENT(serialized);
+    char buf[256];
+    size_t written = serializeJson(txPayload, buf, sizeof(buf));
+    if (written > 0)
+    {
+        socketIO.sendEVENT(buf);
+    }
 }
 
 void emitHeartbeatAck()
 {
-    JsonDocument heartbeatPayload = DynamicJsonDocument(128);
+    DynamicJsonDocument heartbeatPayload(128);
     heartbeatPayload[0] = "esp_heartbeat_ack";
 
     JsonObject payload = heartbeatPayload[1].to<JsonObject>();
     payload["timestamp"] = millis();
 
-    String serialized;
-    serializeJson(heartbeatPayload, serialized);
-    socketIO.sendEVENT(serialized);
+    char buf[256];
+    size_t written = serializeJson(heartbeatPayload, buf, sizeof(buf));
+    if (written > 0)
+    {
+        socketIO.sendEVENT(buf);
+    }
 }
 
 /**
@@ -125,10 +135,9 @@ void displayMessage(const char *messageBuffer)
         return;
     }
 
-    String message = String(messageBuffer);
     display.clearDisplay();
     display.setCursor(0, 1);
-    display.println(message);
+    display.println(messageBuffer);
     display.display();
 }
 
@@ -148,16 +157,35 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
         break;
 
     case sIOtype_CONNECT:
-        Serial.printf("[SocketIo] Connected to url: %s\n", payload);
+    {
+        // payload may not be NUL-terminated; print safely
+        char tmp[129];
+        size_t copyLen = (length < (sizeof(tmp) - 1)) ? length : (sizeof(tmp) - 1);
+        if (copyLen > 0 && payload != NULL)
+        {
+            memcpy(tmp, payload, copyLen);
+        }
+        tmp[copyLen] = '\0';
+        Serial.printf("[SocketIo] Connected to url: %s\n", tmp);
 
         socketIO.send(sIOtype_CONNECT, "/");
-        break;
+    }
+    break;
 
     case sIOtype_EVENT:
-        Serial.printf("[SocketIo] get event: %s\n", payload);
+    {
+        // print payload safely
+        char tmp[257];
+        size_t copyLen = (length < (sizeof(tmp) - 1)) ? length : (sizeof(tmp) - 1);
+        if (copyLen > 0 && payload != NULL)
+        {
+            memcpy(tmp, payload, copyLen);
+        }
+        tmp[copyLen] = '\0';
+        Serial.printf("[SocketIo] get event: %s\n", tmp);
 
         // parse the payload into a json object
-        JsonDocument payloadObject = DynamicJsonDocument(1024);
+        DynamicJsonDocument payloadObject(1024);
         DeserializationError error = deserializeJson(payloadObject, payload, length);
 
         if (error)
@@ -167,22 +195,12 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
             return;
         }
 
-        String eventName = payloadObject[0];
-        Serial.printf("[IOc] event name: %s\n", eventName.c_str());
+        const char *eventName = payloadObject[0];
+        Serial.printf("[IOc] event name: %s\n", eventName);
 
-        if (eventName == "update")
+        if (strcmp(eventName, "update") == 0)
         {
             JsonObject attributesObject = payloadObject[1].as<JsonObject>();
-
-            // print all attributes
-            /*
-            for (JsonPair artribute : attributesObject) {
-                const char* key = artribute.key().c_str();
-                JsonVariant value = artribute.value();
-
-                Serial.printf("Key: %s, Value: %s\n", key, value.as<String>().c_str());
-            }
-            */
 
             if (attributesObject.containsKey("buttonState"))
             {
@@ -192,16 +210,16 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
 
             if (attributesObject.containsKey("message"))
             {
-                String message = attributesObject["message"];
-                Serial.printf("[IOc] message: %s\n", message.c_str());
-                if (message != "null")
+                const char *message = attributesObject["message"];
+                Serial.printf("[IOc] message: %s\n", message);
+                if (message != NULL && strcmp(message, "null") != 0)
                 {
-                    displayMessage(message.c_str());
+                    displayMessage(message);
                 }
             }
         }
 
-        if (eventName == "clear")
+        if (strcmp(eventName, "clear") == 0)
         {
             Serial.printf("[IOc] clearing OLED screen\n");
             if (displayAvailable)
@@ -211,13 +229,13 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
             }
         }
 
-        if (eventName == "esp_heartbeat")
+        if (strcmp(eventName, "esp_heartbeat") == 0)
         {
             Serial.printf("[IOc] heartbeat received\n");
             emitHeartbeatAck();
         }
 
-        if (eventName == "tx")
+        if (strcmp(eventName, "tx") == 0)
         {
             JsonObject attributesObject = payloadObject[1].as<JsonObject>();
 
@@ -251,21 +269,22 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
                     bitLength = attributesObject["bitlength"].as<unsigned int>();
                 }
 
-                if (txPin >= 0)
+                if (txPin >= 0 && bitLength > 0 && bitLength <= 64)
                 {
                     mySwitch.send(txCode, bitLength);
                     // show on OLED briefly
-                    sprintf(messageBuffer, "Sent: %lu", txCode);
+                    snprintf(messageBuffer, sizeof(messageBuffer), "Sent: %lu", txCode);
                     displayMessage(messageBuffer);
                     emitTxAck(txCode, bitLength);
                 }
                 else
                 {
+                    Serial.println("Invalid TX parameters or transmitter disabled");
                 }
             }
         }
-
         break;
+    }
     }
 }
 
@@ -320,17 +339,32 @@ void setup()
 
     WiFi.begin(ssid, password);
 
-    while (WiFi.status() != WL_CONNECTED)
+    // Wait for connection with timeout (60 * 500ms = 30s)
+    int attempts = 0;
+    const int maxAttempts = 60;
+    while (WiFi.status() != WL_CONNECTED && attempts < maxAttempts)
     {
         delay(500);
         Serial.print(".");
+        attempts++;
     }
 
-    String ip = WiFi.localIP().toString();
-    Serial.printf("WiFi Connected %s\n", ip.c_str());
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        IPAddress ip = WiFi.localIP();
+        char ipbuf[32];
+        snprintf(ipbuf, sizeof(ipbuf), "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+        Serial.printf("WiFi Connected %s\n", ipbuf);
 
-    sprintf(messageBuffer, "WiFi connected\n\nIp: %s\n", ip.c_str());
-    displayMessage(messageBuffer);
+        snprintf(messageBuffer, sizeof(messageBuffer), "WiFi connected\n\nIp: %s\n", ipbuf);
+        displayMessage(messageBuffer);
+    }
+    else
+    {
+        Serial.println("WiFi connection timed out");
+        snprintf(messageBuffer, sizeof(messageBuffer), "WiFi not connected\n");
+        displayMessage(messageBuffer);
+    }
 
     // server address, port and URL
     socketIO.begin(host, port, "/socket.io/?EIO=4");

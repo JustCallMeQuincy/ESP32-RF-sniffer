@@ -435,7 +435,7 @@
         let espResponseTimeMs = null;
         const TX_ACK_TIMEOUT_MS = 4000;
         const pendingTxRequests = new Map();
-        const BACKEND_PING_INTERVAL_MS = 5000;
+        const BACKEND_PING_INTERVAL_MS = 1000;
         const pendingBackendPings = new Map();
         let backendPingIntervalId = null;
         let backendPingSequence = 0;

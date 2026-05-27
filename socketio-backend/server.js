@@ -6,6 +6,10 @@ const fs = require("fs");
 const helpers = require("./helpers");
 const port = 8890;
 
+// Enable payload (TX/RX) console logging when DEBUG_PAYLOADS is set.
+// Accepts: DEBUG_PAYLOADS=1 or DEBUG=true or DEBUG_PAYLOADS=true
+const DEBUG_PAYLOADS = process.env.DEBUG_PAYLOADS === "1" || process.env.DEBUG === "true" || process.env.DEBUG_PAYLOADS === "true";
+
 const logEntries = [];
 
 const ESP_HEARTBEAT_INTERVAL_MS = 1000;
@@ -159,7 +163,9 @@ io.on("connection", function (socket) {
     const clientRequestId = data.clientRequestId || null;
 
     // data expected: { code: <string|number>, meta?: {...} }
-    console.log("Received tx from client:", socket.id, data);
+    if (DEBUG_PAYLOADS) {
+      console.log("Received tx from client:", socket.id, data);
+    }
     const timestamp = new Date().toISOString();
     const logEntry = timestamp + " - " + JSON.stringify({ type: "tx", code: normalizedCode, meta: data.meta || null }) + "\n";
 
@@ -188,7 +194,9 @@ io.on("connection", function (socket) {
       clientRequestId: clientRequestId
     });
 
-    console.log("Forwarded tx to clients:", normalizedCode);
+    if (DEBUG_PAYLOADS) {
+      console.log("Forwarded tx to clients:", normalizedCode);
+    }
   });
 
   socket.on("backend_ping", function (data) {
@@ -230,9 +238,6 @@ io.on("connection", function (socket) {
   });
 
   socket.onAny((event, ...args) => {
-    console.log(`Received event: ${event}`);
-    console.log("With arguments:", args);
-
     let payload = args && args.length > 0 ? args[0] : null;
 
     try {
@@ -240,17 +245,25 @@ io.on("connection", function (socket) {
         payload = JSON.parse(payload);
       } else if (Array.isArray(payload) && payload.length > 0 && typeof payload[0] === "string" && helpers.isJSONStringObject(payload[0])) {
         payload = JSON.parse(payload[0]);
-      } else if (typeof payload === "object" && payload !== null) {
-        // already an object - keep as-is
-      } else {
-        // leave payload as-is (could be null, number, etc.)
       }
-
-      console.log("Parsed payload:", payload);
-
     } catch (e) {
       console.log("Error parsing JSON:", e);
       socket.emit(event, { message: "Error parsing message" });
+      return;
+    }
+
+    const isHeartbeatOrPing = event && (event.includes("heartbeat") || event.includes("ping") || event.includes("pong"));
+    const isPayloadEvent = event && (event === "tx" || event === "rf_log" || event === "rx");
+
+    if (DEBUG_PAYLOADS) {
+      console.log(`Received event: ${event}`);
+      console.log("With arguments:", args);
+      console.log("Parsed payload:", payload);
+    } else {
+      if (isHeartbeatOrPing) {
+        console.log(`Received event: ${event}`, payload);
+      }
+      // when not debugging, do not print payloads like tx/rf_log/rx
     }
   });
 });

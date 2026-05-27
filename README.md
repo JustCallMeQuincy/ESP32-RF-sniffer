@@ -31,7 +31,32 @@ to enter its directory
 5. Get the ip address of your device using `ipconfig` in your Command Prompt or terminal, you will need it later
 
 >[!note]
->Usually, one would use the vlaue from `IPv4 Address. . . . . . . . . . . :` under your `Wireless LAN adapter Wi-Fi`.
+>Usually, one would use the value from `IPv4 Address. . . . . . . . . . . :` under your `Wireless LAN adapter Wi-Fi`.
+
+## Debug logging
+The backend can optionally print full payloads (TX and RX) to the console for debugging. By default only heartbeats and ping/pong messages are logged.
+
+Enable payload logging by setting an environment variable before starting the server:
+
+PowerShell:
+```powershell
+$env:DEBUG_PAYLOADS = "1"
+node socketio-backend/server.js
+```
+
+Command Prompt (cmd):
+```cmd
+set DEBUG_PAYLOADS=1&& node socketio-backend/server.js
+```
+
+Unix / macOS (bash/zsh):
+```bash
+DEBUG_PAYLOADS=1 node socketio-backend/server.js
+```
+
+You can also set `DEBUG=true` as an alternative flag. When `DEBUG_PAYLOADS` is not set, the server will continue to emit heartbeat and ping logs but will suppress TX/RX payload console output.
+
+All RX and TX transmissions are logged in the `backend.log` file.
 
 ## Setup the ESP32
 1. Connect the wiring on the ESP32, following the wiring diagram below

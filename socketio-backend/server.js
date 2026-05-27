@@ -154,17 +154,20 @@ io.on("connection", function (socket) {
     console.log("Forwarded tx to clients:", data.code);
   });
 
+  // Clear only the in-memory/session logs (used by "Clear Session Logs")
   socket.on("clear", function () {
     logEntries.length = 0;
+    io.emit("clear");
+  });
 
+  // Clear only the system log file on disk (used by "Clear System Logs")
+  socket.on("clear_system", function () {
     try {
       fs.writeFileSync(path.join(__dirname, "log.txt"), "");
+      io.emit("system_cleared");
     } catch (err) {
-      console.log("Error clearing log file:", err);
-      return;
+      console.log("Error clearing system log file:", err);
     }
-
-    io.emit("clear");
   });
 
   socket.on("esp_heartbeat_ack", function () {

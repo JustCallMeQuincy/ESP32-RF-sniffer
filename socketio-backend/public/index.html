@@ -307,10 +307,24 @@
         <div id="logContainer"
             class="max-h-[55vh] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm"></div>
 
-        <div class="mt-4 flex flex-wrap gap-3">
-            <button id="clearLogsButton"
-                class="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Clear
-                Logs</button>
+        <div class="mt-6">
+            <div class="border border-rose-200 rounded-lg bg-rose-50 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-medium text-rose-800">Danger Zone</h3>
+                        <p class="text-sm text-rose-700">Irreversible actions. Use with caution.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-3">
+                    <button id="clearLogsButton"
+                        class="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Clear
+                        Session Logs</button>
+                    <button id="clearSystemButton"
+                        class="rounded-md bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Clear
+                        System Logs</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -387,6 +401,10 @@
         }
 
         clearLogsButton.addEventListener('click', sendClearEvent);
+        const clearSystemButton = document.getElementById('clearSystemButton');
+        if (clearSystemButton) {
+            clearSystemButton.addEventListener('click', sendClearSystemEvent);
+        }
         themeToggleButton.addEventListener('click', toggleTheme);
 
         applyTheme(getCurrentTheme(), false);
@@ -580,8 +598,25 @@
         }
 
         function sendClearEvent() {
+            if (!confirm('Are you sure you want to clear session logs? This will only clear the current session view.')) {
+                return;
+            }
+
             socket.emit("clear");
         }
+
+        function sendClearSystemEvent() {
+            if (!confirm('Are you sure you want to clear system logs (log.txt)? This cannot be undone.')) {
+                return;
+            }
+
+            socket.emit("clear_system");
+        }
+
+        socket.on("system_cleared", function () {
+            // Inform user that system logs were cleared
+            alert('System logs have been cleared on the server.');
+        });
 
         // --- Transmitter history management ---
         const STORAGE_KEY = 'txHistory';

@@ -146,6 +146,35 @@
             background: rgba(30, 41, 59, 0.95);
         }
 
+        html[data-theme="dark"] .bf-auto-pause-toggle {
+            background: rgba(15, 23, 42, 0.75) !important;
+            color: var(--page-text) !important;
+            border-color: var(--border) !important;
+        }
+
+        html[data-theme="dark"] .bf-auto-pause-track {
+            background: rgba(71, 85, 105, 0.92);
+        }
+
+        html[data-theme="dark"] .bf-auto-pause-toggle .peer:checked+.bf-auto-pause-track {
+            background: #10b981;
+        }
+
+        .bf-auto-pause-toggle input:checked+.bf-auto-pause-track .bf-auto-pause-knob {
+            transform: translateX(1rem);
+        }
+
+        html[data-theme="dark"] #bfControlCard.bf-paused {
+            background-color: rgba(15, 23, 42, 0.72) !important;
+            border-color: rgba(148, 163, 184, 0.4) !important;
+        }
+
+        #bfControlCard.bf-paused {
+            background-color: rgba(248, 250, 252, 0.9);
+            border-color: rgba(148, 163, 184, 0.55);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
         .theme-toggle-icon {
             display: block;
             flex: none;
@@ -204,7 +233,6 @@
             class="mb-4 rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm ring-1 ring-slate-900/5">
             <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
                 <div>
-                    <h2 class="text-lg font-semibold text-slate-900">Transmitter</h2>
                     <p class="text-xs text-slate-500">Send codes or run repeat and cycle routines from one place.</p>
                 </div>
                 <span id="txStatusBadge"
@@ -241,10 +269,24 @@
                     </div>
                 </div>
 
-                <div class="h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <div class="font-semibold text-slate-900">Brute-force / Repeat</div>
-                        <div class="text-xs text-slate-500">Adjust rate and mode</div>
+                <div id="bfControlCard" class="h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <div class="mb-2 flex items-start justify-between gap-3">
+                        <div>
+                            <div class="font-semibold text-slate-900">Brute-force / Repeat</div>
+                            <div class="text-xs text-slate-500">Adjust rate and mode</div>
+                        </div>
+                        <label
+                            class="bf-auto-pause-toggle inline-flex cursor-pointer items-center rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-emerald-500/30"
+                            title="Auto-pause brute-force when the ESP falls behind.">
+                            <input id="bfAutoPauseToggle" type="checkbox" checked class="peer sr-only"
+                                aria-label="Auto-pause brute-force when the ESP falls behind." />
+                            <span
+                                class="bf-auto-pause-track relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
+                                <span
+                                    class="bf-auto-pause-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform"></span>
+                            </span>
+                            <span class="text-xs font-semibold text-slate-600 ml-2">Auto-pause</span>
+                        </label>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <input id="bfMode" type="hidden" value="repeat" />
@@ -291,6 +333,14 @@
                         <button id="bfStep"
                             class="rounded-md bg-slate-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700">Step</button>
                     </div>
+
+                    <div id="bfRateWarning"
+                        class="mt-2 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm"
+                        role="status" aria-live="polite"></div>
+
+                    <div id="bfLagStatus"
+                        class="mt-3 hidden rounded-md border px-3 py-2 text-xs font-semibold shadow-sm" role="status"
+                        aria-live="polite"></div>
                 </div>
             </div>
         </div>
@@ -380,6 +430,10 @@
         const bfCycleRestart = document.getElementById('bfCycleRestart');
         const bfStartStop = document.getElementById('bfStartStop');
         const bfStep = document.getElementById('bfStep');
+        const bfRateWarning = document.getElementById('bfRateWarning');
+        const bfLagStatus = document.getElementById('bfLagStatus');
+        const bfAutoPauseToggle = document.getElementById('bfAutoPauseToggle');
+        const bfControlCard = document.getElementById('bfControlCard');
 
         const THEME_STORAGE_KEY = 'themePreference';
 
@@ -424,6 +478,15 @@
             clearSystemButton.addEventListener('click', sendClearSystemEvent);
         }
         themeToggleButton.addEventListener('click', toggleTheme);
+        if (bfAutoPauseToggle) {
+            bfAutoPauseToggle.addEventListener('change', () => {
+                if (!bfAutoPauseToggle.checked && bfAutoPaused && !hasPendingBruteForceRequest()) {
+                    maybeResumeBruteForce();
+                }
+
+                updateBruteForceLagStatus();
+            });
+        }
 
         applyTheme(getCurrentTheme(), false);
 
@@ -432,8 +495,13 @@
         let backendResponseTimeMs = null;
         let espConnected = false;
         let espConnectedAt = null;
+        let espLastHeartbeatAt = null;
+        let espHeartbeatLagTicks = null;
         let espResponseTimeMs = null;
         const TX_ACK_TIMEOUT_MS = 4000;
+        const HEARTBEAT_INTERVAL_MS = 1000;
+        const HEARTBEAT_LAG_THRESHOLD_TICKS = 5;
+        const HEARTBEAT_RESUME_THRESHOLD_TICKS = 2;
         const pendingTxRequests = new Map();
         const BACKEND_PING_INTERVAL_MS = 1000;
         const pendingBackendPings = new Map();
@@ -441,6 +509,9 @@
         let backendPingSequence = 0;
         let txFeedbackState = null;
         let txFeedbackRelativeInfo = null;
+        let bfRunning = false;
+        let bfAutoPaused = false;
+        let bfLoopConfig = null;
         const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, {
             numeric: 'auto',
             style: 'long'
@@ -513,6 +584,7 @@
             setStatusRow(frontendStatusBadge, frontendUptime, frontendConnected, frontendConnectedAt, backendResponseTimeMs);
             setStatusRow(espStatusBadge, espUptime, espConnected, espConnectedAt, espResponseTimeMs);
             updateTransmitterStatus();
+            updateBruteForceLagStatus();
         }
 
         function stopBackendPingMonitor() {
@@ -549,6 +621,216 @@
             txStatusBadge.classList.toggle('text-emerald-700', isReady);
             txStatusBadge.classList.toggle('bg-rose-50', !isReady);
             txStatusBadge.classList.toggle('text-rose-700', !isReady);
+        }
+
+        function updateBruteForceStartStopButtonUI() {
+            if (!bfStartStop) {
+                return;
+            }
+
+            if (bfRunning) {
+                bfStartStop.textContent = 'Stop';
+                bfStartStop.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                bfStartStop.classList.add('bg-rose-600', 'hover:bg-rose-700');
+            } else {
+                bfStartStop.textContent = 'Start';
+                bfStartStop.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+                bfStartStop.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+            }
+        }
+
+        function updateBruteForceRateWarning() {
+            if (!bfRateWarning) {
+                return;
+            }
+
+            const rate = parseInt(bfRate?.value, 10);
+
+            if (Number.isFinite(rate) && rate > 0 && rate < 500) {
+                bfRateWarning.textContent = 'Warning: delays below 500 ms can clog the RF frequency and may overheat the ESP32.';
+                bfRateWarning.classList.remove('hidden');
+            } else {
+                bfRateWarning.textContent = '';
+                bfRateWarning.classList.add('hidden');
+            }
+        }
+
+        function updateBruteForceCardUI() {
+            if (!bfControlCard) {
+                return;
+            }
+
+            bfControlCard.classList.toggle('bf-paused', bfAutoPaused);
+        }
+
+        function isAutoPauseActive() {
+            return bfAutoPauseToggle ? bfAutoPauseToggle.checked : true;
+        }
+
+        function hasPendingBruteForceRequest() {
+            for (const request of pendingTxRequests.values()) {
+                if (request && request.source === 'brute-force') {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function clearPendingBruteForceRequests() {
+            for (const [requestId, request] of pendingTxRequests.entries()) {
+                if (request && request.source === 'brute-force') {
+                    clearTimeout(request.timeoutId);
+                    pendingTxRequests.delete(requestId);
+                }
+            }
+
+            updateBruteForceLagStatus();
+        }
+
+        function shouldAutoPauseBruteForce() {
+            if (!isAutoPauseActive()) {
+                return false;
+            }
+
+            if (!frontendConnected || !espConnected) {
+                return true;
+            }
+
+            return typeof espHeartbeatLagTicks === 'number' && espHeartbeatLagTicks >= HEARTBEAT_LAG_THRESHOLD_TICKS;
+        }
+
+        function clearBruteForceInterval() {
+            if (bfInterval) {
+                clearInterval(bfInterval);
+                bfInterval = null;
+            }
+        }
+
+        function pauseBruteForceIfNeeded(message) {
+            if (!bfRunning || bfAutoPaused) {
+                return;
+            }
+
+            bfAutoPaused = true;
+            clearBruteForceInterval();
+
+            if (message) {
+                showTxFeedback(message, 'warning');
+            }
+
+            updateBruteForceCardUI();
+            updateBruteForceStartStopButtonUI();
+            updateBruteForceLagStatus();
+        }
+
+        function maybeResumeBruteForce() {
+            if (!bfRunning || !bfAutoPaused || !bfLoopConfig) {
+                return;
+            }
+
+            const lagTicks = typeof espHeartbeatLagTicks === 'number' ? espHeartbeatLagTicks : null;
+
+            if (hasPendingBruteForceRequest()) {
+                return;
+            }
+
+            if (isAutoPauseActive() && (shouldAutoPauseBruteForce() || (lagTicks !== null && lagTicks > HEARTBEAT_RESUME_THRESHOLD_TICKS))) {
+                return;
+            }
+
+            bfAutoPaused = false;
+            clearBruteForceInterval();
+            bfInterval = setInterval(runBruteForceTick, bfLoopConfig.rate);
+            updateBruteForceCardUI();
+            updateBruteForceStartStopButtonUI();
+            updateBruteForceLagStatus();
+        }
+
+        function runBruteForceTick() {
+            if (!bfRunning || !bfLoopConfig) {
+                return;
+            }
+
+            if (shouldAutoPauseBruteForce()) {
+                pauseBruteForceIfNeeded(`ESP is ${typeof espHeartbeatLagTicks === 'number' ? espHeartbeatLagTicks : 0} ticks behind expected. Auto-paused.`);
+                return;
+            }
+
+            if (bfAutoPaused) {
+                maybeResumeBruteForce();
+                return;
+            }
+
+            if (hasPendingBruteForceRequest()) {
+                updateBruteForceLagStatus();
+                return;
+            }
+
+            if (bfLoopConfig.mode === 'repeat') {
+                sendCode(bfLoopConfig.repeatCode, { remember: false, showFeedback: false, trackAck: true, source: 'brute-force' });
+            } else {
+                sendCode(String(bfCurrent), { remember: false, showFeedback: false, trackAck: true, source: 'brute-force' });
+                bfCurrent++;
+                if (bfCurrent > bfLoopConfig.end) {
+                    bfCurrent = bfLoopConfig.start;
+                }
+                updateCycleRestartButtonUI();
+            }
+
+            updateBruteForceLagStatus();
+        }
+
+        function updateBruteForceLagStatus() {
+            if (!bfLagStatus) {
+                return;
+            }
+
+            updateBruteForceCardUI();
+
+            const lagTicks = typeof espHeartbeatLagTicks === 'number' ? espHeartbeatLagTicks : null;
+
+            if (lagTicks === null) {
+                if (bfAutoPaused && !hasPendingBruteForceRequest()) {
+                    maybeResumeBruteForce();
+                }
+
+                if (!bfAutoPaused) {
+                    bfLagStatus.className = 'mt-3 hidden rounded-md border px-3 py-2 text-xs font-semibold shadow-sm';
+                    bfLagStatus.textContent = '';
+                }
+                return;
+            }
+
+            const isLagging = lagTicks >= HEARTBEAT_LAG_THRESHOLD_TICKS;
+
+            if (!isLagging) {
+                if (bfAutoPaused && !hasPendingBruteForceRequest()) {
+                    maybeResumeBruteForce();
+                }
+
+                if (!bfAutoPaused) {
+                    bfLagStatus.className = 'mt-3 hidden rounded-md border px-3 py-2 text-xs font-semibold shadow-sm';
+                    bfLagStatus.textContent = '';
+                } else if (hasPendingBruteForceRequest()) {
+                    bfLagStatus.className = 'mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 shadow-sm';
+                    bfLagStatus.textContent = 'Waiting for the last brute-force send to finish before resuming.';
+                }
+                return;
+            }
+
+            if (bfRunning && isAutoPauseActive()) {
+                pauseBruteForceIfNeeded(`ESP is ${lagTicks} ticks behind expected. Auto-paused.`);
+            }
+
+            const variantClasses = lagTicks >= HEARTBEAT_LAG_THRESHOLD_TICKS + 3
+                ? 'border-rose-200 bg-rose-50 text-rose-700'
+                : 'border-amber-200 bg-amber-50 text-amber-700';
+
+            bfLagStatus.className = `mt-3 rounded-md border px-3 py-2 text-xs font-semibold shadow-sm ${variantClasses}`;
+            bfLagStatus.textContent = isAutoPauseActive()
+                ? `ESP is ${lagTicks} ticks behind expected.`
+                : `ESP is ${lagTicks} ticks behind expected. Auto-pause is off.`;
         }
 
         function hideTxFeedback() {
@@ -614,6 +896,7 @@
                 clearTimeout(request.timeoutId);
             });
             pendingTxRequests.clear();
+            updateBruteForceLagStatus();
 
             if (feedbackMessage) {
                 showTxFeedback(feedbackMessage, feedbackType);
@@ -732,6 +1015,8 @@
         // --- Log loading ---
         window.addEventListener('load', function () {
             updateBruteForceModeUI();
+            updateBruteForceStartStopButtonUI();
+            updateBruteForceCardUI();
             resetReceivedPanel();
 
             fetch(`${backendBaseUrl}/api/logs`)
@@ -801,6 +1086,11 @@
             if (Number.isNaN(espConnectedAt)) {
                 espConnectedAt = null;
             }
+            espLastHeartbeatAt = status && status.lastHeartbeatAt ? Date.parse(status.lastHeartbeatAt) : null;
+            if (Number.isNaN(espLastHeartbeatAt)) {
+                espLastHeartbeatAt = null;
+            }
+            espHeartbeatLagTicks = status && typeof status.heartbeatLagTicks === 'number' ? status.heartbeatLagTicks : null;
             espResponseTimeMs = status && typeof status.responseTimeMs === 'number' ? status.responseTimeMs : null;
             updateConnectionBanner();
         });
@@ -889,6 +1179,8 @@
                     pendingTxRequests.delete(fallback[0]);
                 }
             }
+
+            updateBruteForceLagStatus();
 
             if (pendingEntry) {
                 clearTimeout(pendingEntry.timeoutId);
@@ -1212,6 +1504,7 @@
                         return;
                     }
                     pendingTxRequests.delete(clientRequestId);
+                    updateBruteForceLagStatus();
                     if (showFeedback) {
                         showTxFeedback(`Send requested for code ${trimmedCode}, but no confirmation arrived.`, 'warning');
                     }
@@ -1220,8 +1513,11 @@
                 pendingTxRequests.set(clientRequestId, {
                     code: trimmedCode,
                     timeoutId: timeoutId,
-                    showFeedback: showFeedback
+                    showFeedback: showFeedback,
+                    source: options.source || 'manual'
                 });
+
+                updateBruteForceLagStatus();
             }
 
             if (showFeedback) {
@@ -1231,7 +1527,7 @@
             socket.emit('tx', {
                 code: trimmedCode,
                 clientRequestId: clientRequestId,
-                meta: { source: 'web' }
+                meta: { source: options.source || 'web', sentAtMs: Date.now() }
             });
 
             if (remember) {
@@ -1261,48 +1557,67 @@
         let bfCurrent = null;
 
         function startBruteForce() {
-            if (bfInterval) return; // already running
+            if (bfRunning) return;
             const mode = bfMode.value;
             const rate = Math.max(1, parseInt(bfRate.value) || 50);
 
             if (mode === 'repeat') {
                 const code = bfRepeat.value.trim();
                 if (!code) return alert('Enter a code to repeat');
-                showTxFeedback(`Repeat running: code ${code} every ${rate} ms.`, 'info');
-                bfInterval = setInterval(() => sendCode(code, { remember: false, showFeedback: false, trackAck: false }), rate);
+                bfLoopConfig = { mode, rate, repeatCode: code };
             } else {
                 const start = parseInt(bfStart.value);
                 const end = parseInt(bfEnd.value);
                 if (Number.isNaN(start) || Number.isNaN(end)) return alert('Enter valid start and end numeric codes');
                 bfCurrent = start;
                 updateCycleRestartButtonUI();
-                showTxFeedback(`Cycle running: ${start} to ${end} every ${rate} ms.`, 'info');
-                bfInterval = setInterval(() => {
-                    sendCode(String(bfCurrent), { remember: false, showFeedback: false, trackAck: false });
-                    bfCurrent++;
-                    if (bfCurrent > end) bfCurrent = start;
-                    updateCycleRestartButtonUI();
-                }, rate);
+                bfLoopConfig = { mode, rate, start, end };
             }
-            bfStartStop.textContent = 'Stop';
+            bfRunning = true;
+            bfAutoPaused = false;
+            clearBruteForceInterval();
+            bfInterval = setInterval(runBruteForceTick, rate);
+            updateBruteForceStartStopButtonUI();
+            updateBruteForceCardUI();
+            showTxFeedback(
+                mode === 'repeat'
+                    ? `Repeat running: code ${bfLoopConfig.repeatCode} every ${rate} ms.`
+                    : `Cycle running: ${bfLoopConfig.start} to ${bfLoopConfig.end} every ${rate} ms.`,
+                'info'
+            );
+            updateBruteForceLagStatus();
         }
 
         function stopBruteForce() {
-            if (bfInterval) {
-                clearInterval(bfInterval);
-                bfInterval = null;
-                bfStartStop.textContent = 'Start';
-                showTxFeedback('Brute-force stopped.', 'info');
+            if (!bfRunning && !bfInterval) {
+                return;
             }
+
+            clearBruteForceInterval();
+            clearPendingBruteForceRequests();
+            bfRunning = false;
+            bfAutoPaused = false;
+            bfLoopConfig = null;
+            bfCurrent = null;
+            updateBruteForceStartStopButtonUI();
+            updateBruteForceCardUI();
+            showTxFeedback('Brute-force stopped.', 'info');
+            updateBruteForceLagStatus();
         }
 
         bfStartStop.addEventListener('click', () => {
-            if (bfInterval) {
+            if (bfRunning) {
                 stopBruteForce();
             } else {
                 startBruteForce();
             }
         });
+
+        if (bfRate) {
+            bfRate.addEventListener('input', updateBruteForceRateWarning);
+            bfRate.addEventListener('change', updateBruteForceRateWarning);
+            updateBruteForceRateWarning();
+        }
 
         bfStep.addEventListener('click', () => {
             const mode = bfMode.value;
@@ -1313,10 +1628,11 @@
                 const end = parseInt(bfEnd.value);
                 if (Number.isNaN(start) || Number.isNaN(end)) return alert('Enter valid start and end numeric codes');
                 if (bfCurrent === null) bfCurrent = start;
-                sendCode(String(bfCurrent), { remember: false, showFeedback: true, trackAck: true });
+                sendCode(String(bfCurrent), { remember: false, showFeedback: true, trackAck: true, source: 'brute-force' });
                 bfCurrent++;
                 if (bfCurrent > end) bfCurrent = start;
                 updateCycleRestartButtonUI();
+                updateBruteForceLagStatus();
             }
         });
 

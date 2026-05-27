@@ -9,7 +9,7 @@ var port = 8890;
 const logEntries = [];
 
 const ESP_HEARTBEAT_INTERVAL_MS = 1000;
-const ESP_HEARTBEAT_TIMEOUT_MS = 4000;
+const ESP_HEARTBEAT_TIMEOUT_MS = 15000;
 
 const frontendConnectionState = {
   socketIds: new Set(),
@@ -20,11 +20,15 @@ const espConnectionState = {
   socketId: null,
   connectedAt: null,
   lastHeartbeatAt: null,
+  lastHeartbeatSeenAt: null,
   lastHeartbeatSentAt: null,
   responseTimeMs: null
 };
 
 function emitConnectionStatus(io) {
+  const lastHeartbeatAt = espConnectionState.lastHeartbeatAt || espConnectionState.lastHeartbeatSeenAt;
+  const heartbeatLagTicks = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / ESP_HEARTBEAT_INTERVAL_MS) - 1) : null;
+
   io.emit("frontend_status", {
     connected: frontendConnectionState.socketIds.size > 0,
     connectedAt: frontendConnectionState.connectedAt
@@ -33,6 +37,8 @@ function emitConnectionStatus(io) {
   io.emit("esp_status", {
     connected: Boolean(espConnectionState.socketId),
     connectedAt: espConnectionState.connectedAt,
+    lastHeartbeatAt: lastHeartbeatAt,
+    heartbeatLagTicks: heartbeatLagTicks,
     responseTimeMs: espConnectionState.responseTimeMs
   });
 }
@@ -47,13 +53,13 @@ function markEspHeartbeat(socket) {
     espConnectionState.connectedAt = new Date().toISOString();
   }
   espConnectionState.lastHeartbeatAt = Date.now();
+  espConnectionState.lastHeartbeatSeenAt = espConnectionState.lastHeartbeatAt;
 }
 
 function clearEspConnection() {
   espConnectionState.socketId = null;
   espConnectionState.connectedAt = null;
   espConnectionState.lastHeartbeatAt = null;
-  espConnectionState.lastHeartbeatSentAt = null;
   espConnectionState.responseTimeMs = null;
 }
 

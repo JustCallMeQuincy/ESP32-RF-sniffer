@@ -251,12 +251,9 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
                     bitLength = attributesObject["bitlength"].as<unsigned int>();
                 }
 
-                Serial.printf("[IOc] tx request: %lu (bits %u)\n", txCode, bitLength);
-
                 if (txPin >= 0)
                 {
                     mySwitch.send(txCode, bitLength);
-                    Serial.printf("[TX] Sent code: %lu (bits: %u)\n", txCode, bitLength);
                     // show on OLED briefly
                     sprintf(messageBuffer, "Sent: %lu", txCode);
                     displayMessage(messageBuffer);
@@ -264,7 +261,6 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
                 }
                 else
                 {
-                    Serial.println("[TX] Transmit pin not configured");
                 }
             }
         }
@@ -359,21 +355,9 @@ void loop()
         displayLastCodes();
         emitRfLog(receivedCode, bitLength, pulseDelay, protocol);
 
-        if (receivedCode == 0)
-        {
-            Serial.println("Unknown encoding");
-        }
-        else
+        if (receivedCode != 0)
         {
             ledStatus = !ledStatus; // Toggle LED status on each received code
-            Serial.print("Received code: ");
-            Serial.print(receivedCode);
-            Serial.print(" / bitlength: ");
-            Serial.print(bitLength);
-            Serial.print(" / delay: ");
-            Serial.print(pulseDelay);
-            Serial.print(" / protocol: ");
-            Serial.println(protocol);
         }
 
         mySwitch.resetAvailable();

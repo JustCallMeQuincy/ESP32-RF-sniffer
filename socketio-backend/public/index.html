@@ -146,10 +146,71 @@
             background: rgba(30, 41, 59, 0.95);
         }
 
+        html:not([data-theme="dark"]) .light-hover-button,
+        html:not([data-theme="dark"]) .light-hover-card {
+            transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
+        }
+
+        html:not([data-theme="dark"]) .light-hover-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+            border-color: #94a3b8;
+        }
+
+        html:not([data-theme="dark"]) .light-hover-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+            border-color: #cbd5e1;
+        }
+
+        html:not([data-theme="dark"]) .light-hover-button-primary:hover {
+            box-shadow: 0 12px 24px rgba(16, 185, 129, 0.16);
+        }
+
+        html:not([data-theme="dark"]) .light-hover-button-danger:hover {
+            box-shadow: 0 12px 24px rgba(225, 29, 72, 0.14);
+        }
+
+        html:not([data-theme="dark"]) .nav-tab-button {
+            transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+        }
+
+        html:not([data-theme="dark"]) .nav-tab-button:hover {
+            transform: translateY(-1px);
+            border-color: #94a3b8;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        html:not([data-theme="dark"]) .nav-tab-button.bg-slate-900:hover {
+            background-color: #334155 !important;
+            border-color: #475569;
+            color: #ffffff !important;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+        }
+
+        html:not([data-theme="dark"]) .nav-tab-button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.35), 0 12px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        html:not([data-theme="dark"]) .nav-tab-button.bg-slate-900:focus-visible {
+            box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.35), 0 12px 24px rgba(15, 23, 42, 0.16);
+        }
+
         html[data-theme="dark"] .bf-auto-pause-toggle {
             background: rgba(15, 23, 42, 0.75) !important;
             color: var(--page-text) !important;
             border-color: var(--border) !important;
+        }
+
+        .session-log-limit-banner {
+            background-color: #ffffff !important;
+        }
+
+        html[data-theme="dark"] .session-log-limit-banner {
+            background-color: #0f172a !important;
         }
 
         html[data-theme="dark"] .bf-auto-pause-track {
@@ -161,6 +222,10 @@
         }
 
         .bf-auto-pause-toggle input:checked+.bf-auto-pause-track .bf-auto-pause-knob {
+            transform: translateX(1rem);
+        }
+
+        .tx-enabled-toggle input:checked+.tx-enabled-track .tx-enabled-knob {
             transform: translateX(1rem);
         }
 
@@ -184,10 +249,20 @@
 
 <body class="min-h-screen bg-slate-100 px-4 py-6 font-mono text-slate-900 sm:px-6 lg:px-8">
     <div class="mx-auto w-full max-w-6xl">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h1 class="text-3xl font-bold tracking-tight">ESP32 RF Sniffer</h1>
+        <div class="mb-4 grid grid-cols-1 items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
+            <div class="flex flex-wrap items-center gap-2 md:justify-self-start">
+                <h1 class="text-3xl font-bold tracking-tight">ESP32 RF Sniffer</h1>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 md:justify-self-center">
+                <button id="dashboardNavButton" type="button"
+                    class="light-hover-button nav-tab-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                    aria-pressed="true">Dashboard</button>
+                <button id="settingsNavButton" type="button"
+                    class="light-hover-button nav-tab-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                    aria-pressed="false">Settings</button>
+            </div>
             <button id="themeToggleButton" type="button"
-                class="theme-toggle-button inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                class="theme-toggle-button light-hover-button inline-flex h-10 w-10 items-center justify-center justify-self-start rounded-md border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 md:justify-self-end"
                 aria-label="Switch to dark mode" aria-pressed="false">
                 <svg id="themeToggleIconLight" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"
                     stroke-linecap="round" stroke-linejoin="round" class="theme-toggle-icon h-4 w-4" aria-hidden="true">
@@ -208,188 +283,314 @@
                 </svg>
             </button>
         </div>
-        <div id="status"
-            class="mb-4 rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm">
-            <div class="flex items-center justify-between gap-3">
-                <span class="flex items-center gap-2">
-                    <span id="frontendStatusBadge"
-                        class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">Disconnected</span>
-                    <span>Application</span>
-                </span>
-                <span id="frontendUptime" class="text-xs font-normal text-slate-500"></span>
-            </div>
-            <div class="mt-2 flex items-center justify-between gap-3">
-                <span class="flex items-center gap-2">
-                    <span id="espStatusBadge"
-                        class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">Disconnected</span>
-                    <span>ESP32</span>
-                </span>
-                <span id="espUptime" class="text-xs font-normal text-slate-500"></span>
-            </div>
-            <div id="connectionLagWarning"
-                class="mt-3 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm"
-                role="status" aria-live="polite"></div>
-        </div>
 
-        <!-- Transmitter controls -->
-        <div id="transmitter"
-            class="mb-4 rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm ring-1 ring-slate-900/5">
-            <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                <div>
-                    <p class="text-xs text-slate-500">Send codes or run repeat and cycle routines from one place.</p>
+        <div id="dashboardView">
+            <div id="status"
+                class="light-hover-card mb-4 rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="flex items-center gap-2">
+                        <span id="frontendStatusBadge"
+                            class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">Disconnected</span>
+                        <span>Application</span>
+                    </span>
+                    <span id="frontendUptime" class="text-xs font-normal text-slate-500"></span>
                 </div>
-                <span id="txStatusBadge"
-                    class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Not ready to
-                    send</span>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
-                <input id="txCodeInput" type="text" placeholder="Enter code (e.g. 123456)"
-                    class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
-                <button id="clearTxButton" type="button"
-                    class="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">Clear</button>
-                <button id="sendTxButton"
-                    class="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Send</button>
-            </div>
-
-            <div id="txFeedback"
-                class="mt-3 hidden items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm font-semibold"
-                role="status" aria-live="polite">
-                <span id="txFeedbackMessage"></span>
-                <button id="txFeedbackDismiss" type="button"
-                    class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-md text-slate-500 transition hover:bg-white/70 hover:text-slate-800"
-                    aria-label="Dismiss TX status" title="Dismiss TX status">&times;</button>
-            </div>
-
-            <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div class="h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <div class="font-semibold text-slate-900">History</div>
-                        <div class="text-xs text-slate-500">Click an entry to reuse it</div>
-                    </div>
-                    <div id="txHistory"
-                        class="min-h-28 max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-2 text-sm">
-                    </div>
+                <div class="mt-2 flex items-center justify-between gap-3">
+                    <span class="flex items-center gap-2">
+                        <span id="espStatusBadge"
+                            class="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">Disconnected</span>
+                        <span>ESP32</span>
+                    </span>
+                    <span id="espUptime" class="text-xs font-normal text-slate-500"></span>
                 </div>
-
-                <div id="bfControlCard" class="h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                    <div class="mb-2 flex items-start justify-between gap-3">
-                        <div>
-                            <div class="font-semibold text-slate-900">Brute-force / Repeat</div>
-                            <div class="text-xs text-slate-500">Adjust rate and mode</div>
-                        </div>
-                        <label
-                            class="bf-auto-pause-toggle inline-flex cursor-pointer items-center rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-emerald-500/30"
-                            title="Auto-pause brute-force when the ESP falls behind.">
-                            <input id="bfAutoPauseToggle" type="checkbox" checked class="peer sr-only"
-                                aria-label="Auto-pause brute-force when the ESP falls behind." />
-                            <span
-                                class="bf-auto-pause-track relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
-                                <span
-                                    class="bf-auto-pause-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform"></span>
-                            </span>
-                            <span class="text-xs font-semibold text-slate-600 ml-2">Auto-pause</span>
-                        </label>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <input id="bfMode" type="hidden" value="repeat" />
-                        <div class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 shadow-sm"
-                            role="tablist" aria-label="Brute-force mode">
-                            <button id="bfModeRepeat" type="button"
-                                class="rounded-md px-3 py-1 text-sm font-semibold transition" aria-pressed="true">Repeat
-                                single</button>
-                            <button id="bfModeCycle" type="button"
-                                class="rounded-md px-3 py-1 text-sm font-semibold transition" aria-pressed="false">Cycle
-                                range</button>
-                        </div>
-                        <input id="bfRate" type="number" value="50" min="1"
-                            class="w-24 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
-                        <span class="text-sm text-slate-500">ms</span>
-                    </div>
-
-                    <div class="mt-3 flex gap-2">
-                        <div id="bfRepeatWrapper" class="flex-1">
-                            <input id="bfRepeat" type="text" placeholder="Code to repeat"
-                                class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
-                        </div>
-                        <div id="bfCycleWrapper" class="flex flex-1 gap-2">
-                            <div class="flex flex-1 gap-2">
-                                <input id="bfStart" type="text" placeholder="Start code"
-                                    class="w-1/2 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
-                                <input id="bfEnd" type="text" placeholder="End code"
-                                    class="w-1/2 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
-                            </div>
-                            <button id="bfCycleRestart" type="button" title="Restart cycle from the start code"
-                                class="hidden inline-flex h-8 w-8 flex-none items-center justify-center rounded-md border border-slate-300 bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"
-                                    stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">
-                                    <path d="M5.5 8.5A6 6 0 1 1 4.8 12" />
-                                    <path d="M5 5v4h4" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="mt-3 flex gap-2">
-                        <button id="bfStartStop"
-                            class="rounded-md bg-emerald-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Start</button>
-                        <button id="bfStep"
-                            class="rounded-md bg-slate-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-600">Step</button>
-                    </div>
-
-                    <div id="bfRateWarning"
-                        class="mt-2 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm"
-                        role="status" aria-live="polite"></div>
-
-                    <div id="bfLagStatus"
-                        class="mt-3 hidden rounded-md border px-3 py-2 text-xs font-semibold shadow-sm" role="status"
-                        aria-live="polite"></div>
-                </div>
+                <div id="connectionLagWarning"
+                    class="mt-3 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm"
+                    role="status" aria-live="polite"></div>
             </div>
-        </div>
 
-        <div class="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="mb-2 flex items-center justify-between gap-3">
-                <h2 class="text-lg font-semibold">Received codes</h2>
-                <div class="text-xs text-slate-500">Unique sniffed codes with receive count</div>
-            </div>
-            <div class="mb-3 grid grid-cols-2 gap-3">
-                <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <div class="text-[10px] uppercase tracking-wide text-slate-400">Total received</div>
-                    <div id="receivedTotalCount" class="text-xl font-bold text-slate-900">0</div>
-                </div>
-                <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <div class="text-[10px] uppercase tracking-wide text-slate-400">Total transmitted</div>
-                    <div id="transmittedTotalCount" class="text-xl font-bold text-slate-900">0</div>
-                </div>
-            </div>
-            <div id="receivedCodes" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
-        </div>
-
-        <div id="logContainer"
-            class="max-h-[55vh] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div id="logEmptyState"
-                class="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                No codes sniffed yet. Waiting for the ESP to catch the first one.
-            </div>
-        </div>
-
-        <div class="mt-6">
-            <div class="border border-rose-200 rounded-lg bg-rose-50 p-4">
-                <div class="flex items-center justify-between">
+            <!-- Transmitter controls -->
+            <div id="transmitter"
+                class="light-hover-card mb-4 rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm ring-1 ring-slate-900/5">
+                <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
                     <div>
-                        <h3 class="text-lg font-medium text-rose-800">Danger Zone</h3>
-                        <p class="text-sm text-rose-700">Irreversible actions. Use with caution.</p>
+                        <p class="text-xs text-slate-500">Send codes or run repeat and cycle routines from one place.
+                        </p>
+                        <p id="txDisabledNotice" class="mt-1 hidden text-xs font-semibold text-rose-700">TX
+                            functionality is disabled in Settings.</p>
+                    </div>
+                    <span id="txStatusBadge"
+                        class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Not ready to
+                        send</span>
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+                    <input id="txCodeInput" type="text" placeholder="Enter code (e.g. 123456)"
+                        class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+                    <button id="clearTxButton" type="button"
+                        class="light-hover-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">Clear</button>
+                    <button id="sendTxButton"
+                        class="light-hover-button light-hover-button-primary inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Send</button>
+                </div>
+
+                <div id="txFeedback"
+                    class="mt-3 hidden items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm font-semibold"
+                    role="status" aria-live="polite">
+                    <span id="txFeedbackMessage"></span>
+                    <button id="txFeedbackDismiss" type="button"
+                        class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-md text-slate-500 transition hover:bg-white/70 hover:text-slate-800"
+                        aria-label="Dismiss TX status" title="Dismiss TX status">&times;</button>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div class="light-hover-card h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <div class="font-semibold text-slate-900">History</div>
+                            <div class="text-xs text-slate-500">Click an entry to reuse it</div>
+                        </div>
+                        <div id="txHistory"
+                            class="min-h-28 max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-2 text-sm">
+                        </div>
+                    </div>
+
+                    <div id="bfControlCard"
+                        class="light-hover-card h-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                        <div class="mb-2 flex items-start justify-between gap-3">
+                            <div>
+                                <div class="font-semibold text-slate-900">Brute-force / Repeat</div>
+                                <div class="text-xs text-slate-500">Adjust rate and mode</div>
+                            </div>
+                            <label
+                                class="bf-auto-pause-toggle inline-flex cursor-pointer items-center rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm transition hover:bg-slate-100 focus-within:ring-2 focus-within:ring-emerald-500/30"
+                                title="Auto-pause brute-force when the ESP falls behind.">
+                                <input id="bfAutoPauseToggle" type="checkbox" checked class="peer sr-only"
+                                    aria-label="Auto-pause brute-force when the ESP falls behind." />
+                                <span
+                                    class="bf-auto-pause-track relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
+                                    <span
+                                        class="bf-auto-pause-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform"></span>
+                                </span>
+                                <span class="text-xs font-semibold text-slate-600 ml-2">Auto-pause</span>
+                            </label>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input id="bfMode" type="hidden" value="repeat" />
+                            <div class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 shadow-sm"
+                                role="tablist" aria-label="Brute-force mode">
+                                <button id="bfModeRepeat" type="button"
+                                    class="rounded-md px-3 py-1 text-sm font-semibold transition"
+                                    aria-pressed="true">Repeat
+                                    single</button>
+                                <button id="bfModeCycle" type="button"
+                                    class="rounded-md px-3 py-1 text-sm font-semibold transition"
+                                    aria-pressed="false">Cycle
+                                    range</button>
+                            </div>
+                            <input id="bfRate" type="number" value="500" min="1"
+                                class="w-24 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
+                            <span class="text-sm text-slate-500">ms</span>
+                        </div>
+
+                        <div class="mt-3 flex gap-2">
+                            <div id="bfRepeatWrapper" class="flex-1">
+                                <input id="bfRepeat" type="text" placeholder="Code to repeat"
+                                    class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
+                            </div>
+                            <div id="bfCycleWrapper" class="flex flex-1 gap-2">
+                                <div class="flex flex-1 gap-2">
+                                    <input id="bfStart" type="text" placeholder="Start code"
+                                        class="w-1/2 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
+                                    <input id="bfEnd" type="text" placeholder="End code"
+                                        class="w-1/2 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm" />
+                                </div>
+                                <button id="bfCycleRestart" type="button" title="Restart cycle from the start code"
+                                    class="hidden inline-flex h-8 w-8 flex-none items-center justify-center rounded-md border border-slate-300 bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+                                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"
+                                        stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"
+                                        aria-hidden="true">
+                                        <path d="M5.5 8.5A6 6 0 1 1 4.8 12" />
+                                        <path d="M5 5v4h4" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 flex gap-2">
+                            <button id="bfStartStop"
+                                class="rounded-md bg-emerald-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Start</button>
+                            <button id="bfStep"
+                                class="rounded-md bg-slate-600 px-3 py-1 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-600">Step</button>
+                        </div>
+
+                        <div id="bfRateWarning"
+                            class="mt-2 hidden rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm"
+                            role="status" aria-live="polite"></div>
+
+                        <div id="bfLagStatus"
+                            class="mt-3 hidden rounded-md border px-3 py-2 text-xs font-semibold shadow-sm"
+                            role="status" aria-live="polite"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="mb-2 flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold">Received codes</h2>
+                    <div class="text-xs text-slate-500">Unique sniffed codes with receive count</div>
+                </div>
+                <div class="mb-3 grid grid-cols-2 gap-3">
+                    <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                        <div class="text-[10px] uppercase tracking-wide text-slate-400">Total received</div>
+                        <div id="receivedTotalCount" class="text-xl font-bold text-slate-900">0/200</div>
+                    </div>
+                    <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                        <div class="text-[10px] uppercase tracking-wide text-slate-400">Total transmitted</div>
+                        <div id="transmittedTotalCount" class="text-xl font-bold text-slate-900">0</div>
+                    </div>
+                </div>
+                <div id="receivedCodes" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
+            </div>
+
+            <div id="logContainer"
+                class="light-hover-card max-h-[55vh] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <div id="logEmptyState"
+                    class="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                    No codes sniffed yet. Waiting for the ESP to catch the first one.
+                </div>
+            </div>
+        </div>
+
+        <div id="settingsView" class="hidden">
+            <div class="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
+                    <div>
+                        <h2 class="text-2xl font-bold tracking-tight">Settings</h2>
+                        <p class="mt-1 text-sm text-slate-500">Tune log retention and transmitter behavior.</p>
+                    </div>
+                    <div id="settingsStatusBadge"
+                        class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Unsaved changes
+                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-4 lg:grid-cols-3">
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Session logs</div>
+                        <div class="mt-1 text-lg font-semibold text-slate-900">Count and size limits</div>
+                        <p class="mt-1 text-sm text-slate-500">Controls how many logged codes are kept and how much
+                            memory they may use.
+                        </p>
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700" for="sessionLogMaxEntries">Max
+                                    logged codes</label>
+                                <input id="sessionLogMaxEntries" type="number" min="1" step="1"
+                                    class="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+                                <p class="mt-2 text-xs text-slate-500">Use the toggle to enable or disable the session
+                                    log cap.</p>
+                            </div>
+                            <div>
+                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Session logs
+                                </div>
+                                <label class="mt-2 inline-flex cursor-pointer items-center gap-3 rounded-full">
+                                    <input id="sessionLogsToggle" type="checkbox" class="peer sr-only" />
+                                    <span
+                                        class="relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
+                                        <span
+                                            class="ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></span>
+                                    </span>
+                                    <span id="sessionLogsToggleLabel" class="text-sm font-semibold text-slate-700">Cap
+                                        enabled</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700"
+                                    for="sessionLogSizeLimitMb">Size limit in MB</label>
+                                <input id="sessionLogSizeLimitMb" type="number" min="1" step="1"
+                                    class="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">System logs</div>
+                        <div class="mt-1 text-lg font-semibold text-slate-900">Age and size limits</div>
+                        <p class="mt-1 text-sm text-slate-500">Older lines are dropped first, then the file is capped by
+                            size.
+                        </p>
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700" for="systemLogMaxAgeDays">Max
+                                    age in days</label>
+                                <input id="systemLogMaxAgeDays" type="number" min="1" step="1"
+                                    class="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700"
+                                    for="systemLogSizeLimitMb">Size limit in MB</label>
+                                <input id="systemLogSizeLimitMb" type="number" min="1" step="1"
+                                    class="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" />
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-sm font-semibold text-slate-700">System logs</label>
+                            <label class="mt-2 inline-flex cursor-pointer items-center gap-3 rounded-full">
+                                <input id="systemLogsToggle" type="checkbox" class="peer sr-only" />
+                                <span
+                                    class="relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
+                                    <span
+                                        class="ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></span>
+                                </span>
+                                <span id="systemLogsToggleLabel" class="text-sm font-semibold text-slate-700">System
+                                    logs enabled</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">TX control</div>
+                        <div class="mt-1 text-lg font-semibold text-slate-900">Enable or disable transmitter actions
+                        </div>
+                        <p class="mt-1 text-sm text-slate-500">When disabled, send, repeat, cycle, and resend actions
+                            are blocked in the UI and backend.</p>
+                        <label
+                            class="tx-enabled-toggle mt-4 inline-flex cursor-pointer items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                            <input id="txEnabledToggle" type="checkbox" class="peer sr-only" />
+                            <span
+                                class="tx-enabled-track relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
+                                <span
+                                    class="tx-enabled-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform"></span>
+                            </span>
+                            <span id="txEnabledLabel" class="text-sm font-semibold text-slate-700">TX enabled</span>
+                        </label>
                     </div>
                 </div>
 
                 <div class="mt-4 flex flex-wrap gap-3">
-                    <button id="clearLogsButton"
-                        class="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Clear
-                        Session Logs</button>
-                    <button id="clearSystemButton"
-                        class="rounded-md bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Clear
-                        System Logs</button>
+                    <button id="saveSettingsButton"
+                        class="light-hover-button light-hover-button-primary rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">Save
+                        settings</button>
+                    <button id="resetSettingsButton"
+                        class="light-hover-button rounded-md bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Reset
+                        defaults</button>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <div class="light-hover-card border border-rose-200 rounded-lg bg-rose-50 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-medium text-rose-800">Danger Zone</h3>
+                            <p class="text-sm text-rose-700">Irreversible actions. Use with caution.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-3">
+                        <button id="clearLogsButton"
+                            class="light-hover-button light-hover-button-danger rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Clear
+                            Session Logs</button>
+                        <button id="clearSystemButton"
+                            class="light-hover-button rounded-md bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Clear
+                            System Logs</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -405,8 +606,26 @@
         const espStatusBadge = document.getElementById('espStatusBadge');
         const espUptime = document.getElementById('espUptime');
         const txStatusBadge = document.getElementById('txStatusBadge');
+        const txDisabledNotice = document.getElementById('txDisabledNotice');
         const connectionLagWarning = document.getElementById('connectionLagWarning');
         const clearLogsButton = document.getElementById('clearLogsButton');
+        const dashboardView = document.getElementById('dashboardView');
+        const settingsView = document.getElementById('settingsView');
+        const dashboardNavButton = document.getElementById('dashboardNavButton');
+        const settingsNavButton = document.getElementById('settingsNavButton');
+        const settingsStatusBadge = document.getElementById('settingsStatusBadge');
+        const sessionLogMaxEntriesInput = document.getElementById('sessionLogMaxEntries');
+        const sessionLogSizeLimitInput = document.getElementById('sessionLogSizeLimitMb');
+        const systemLogMaxAgeDaysInput = document.getElementById('systemLogMaxAgeDays');
+        const systemLogSizeLimitInput = document.getElementById('systemLogSizeLimitMb');
+        const txEnabledToggle = document.getElementById('txEnabledToggle');
+        const txEnabledLabel = document.getElementById('txEnabledLabel');
+        const sessionLogsToggle = document.getElementById('sessionLogsToggle');
+        const sessionLogsToggleLabel = document.getElementById('sessionLogsToggleLabel');
+        const systemLogsToggle = document.getElementById('systemLogsToggle');
+        const systemLogsToggleLabel = document.getElementById('systemLogsToggleLabel');
+        const saveSettingsButton = document.getElementById('saveSettingsButton');
+        const resetSettingsButton = document.getElementById('resetSettingsButton');
         const themeToggleButton = document.getElementById('themeToggleButton');
         const themeToggleIconLight = document.getElementById('themeToggleIconLight');
         const themeToggleIconDark = document.getElementById('themeToggleIconDark');
@@ -439,10 +658,232 @@
         const bfAutoPauseToggle = document.getElementById('bfAutoPauseToggle');
         const bfControlCard = document.getElementById('bfControlCard');
 
+        const PAGE_VIEW_STORAGE_KEY = 'pageViewPreference';
+        const DEFAULT_SETTINGS = {
+            sessionLogSizeLimitMb: 5,
+            sessionLogMaxEntries: 200,
+            sessionLogCapEnabled: true,
+            systemLogMaxAgeDays: 30,
+            systemLogSizeLimitMb: 10,
+            systemLogsEnabled: true,
+            txEnabled: true
+        };
         const THEME_STORAGE_KEY = 'themePreference';
+
+        let txEnabled = true;
+        let currentSettings = { ...DEFAULT_SETTINGS };
+        let settingsDirty = false;
 
         function getCurrentTheme() {
             return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        }
+
+        function getCurrentPageView() {
+            try {
+                const storedView = localStorage.getItem(PAGE_VIEW_STORAGE_KEY);
+                return storedView === 'settings' ? 'settings' : 'dashboard';
+            } catch (error) {
+                return 'dashboard';
+            }
+        }
+
+        function savePageView(viewName) {
+            try {
+                localStorage.setItem(PAGE_VIEW_STORAGE_KEY, viewName);
+            } catch (error) {
+                // Ignore storage failures and keep the current session view.
+            }
+        }
+
+        function updatePageNavState(viewName) {
+            const isDashboard = viewName !== 'settings';
+
+            if (dashboardView) {
+                dashboardView.classList.toggle('hidden', !isDashboard);
+            }
+
+            if (settingsView) {
+                settingsView.classList.toggle('hidden', isDashboard);
+            }
+
+            if (dashboardNavButton) {
+                dashboardNavButton.classList.toggle('bg-slate-900', isDashboard);
+                dashboardNavButton.classList.toggle('text-white', isDashboard);
+                dashboardNavButton.classList.toggle('bg-white', !isDashboard);
+                dashboardNavButton.classList.toggle('text-slate-700', !isDashboard);
+                dashboardNavButton.setAttribute('aria-pressed', String(isDashboard));
+            }
+
+            if (settingsNavButton) {
+                settingsNavButton.classList.toggle('bg-slate-900', !isDashboard);
+                settingsNavButton.classList.toggle('text-white', !isDashboard);
+                settingsNavButton.classList.toggle('bg-white', isDashboard);
+                settingsNavButton.classList.toggle('text-slate-700', isDashboard);
+                settingsNavButton.setAttribute('aria-pressed', String(!isDashboard));
+            }
+        }
+
+        function setPageView(viewName, persist = true) {
+            const nextView = viewName === 'settings' ? 'settings' : 'dashboard';
+            updatePageNavState(nextView);
+
+            if (persist) {
+                savePageView(nextView);
+            }
+        }
+
+        function isSessionLogCapEnabled() {
+            return Boolean(sessionLogsToggle ? sessionLogsToggle.checked : currentSettings.sessionLogCapEnabled);
+        }
+
+        function isSystemLogsEnabled() {
+            return Boolean(systemLogsToggle ? systemLogsToggle.checked : currentSettings.systemLogsEnabled);
+        }
+
+        function setSettingsDirty(isDirty) {
+            settingsDirty = Boolean(isDirty);
+
+            if (settingsStatusBadge) {
+                settingsStatusBadge.textContent = settingsDirty ? 'Unsaved changes' : 'Saved';
+                settingsStatusBadge.classList.toggle('bg-amber-100', settingsDirty);
+                settingsStatusBadge.classList.toggle('text-amber-800', settingsDirty);
+                settingsStatusBadge.classList.toggle('bg-slate-100', !settingsDirty);
+                settingsStatusBadge.classList.toggle('text-slate-700', !settingsDirty);
+            }
+        }
+
+        function applySettingsToUi(settings) {
+            currentSettings = {
+                sessionLogSizeLimitMb: Number(settings.sessionLogSizeLimitMb) || DEFAULT_SETTINGS.sessionLogSizeLimitMb,
+                sessionLogMaxEntries: Math.max(1, Number(settings.sessionLogMaxEntries) || DEFAULT_SETTINGS.sessionLogMaxEntries),
+                sessionLogCapEnabled: typeof settings.sessionLogCapEnabled === 'boolean' ? settings.sessionLogCapEnabled : DEFAULT_SETTINGS.sessionLogCapEnabled,
+                systemLogsEnabled: typeof settings.systemLogsEnabled === 'boolean' ? settings.systemLogsEnabled : DEFAULT_SETTINGS.systemLogsEnabled,
+                systemLogMaxAgeDays: Number(settings.systemLogMaxAgeDays) || DEFAULT_SETTINGS.systemLogMaxAgeDays,
+                systemLogSizeLimitMb: Number(settings.systemLogSizeLimitMb) || DEFAULT_SETTINGS.systemLogSizeLimitMb,
+                txEnabled: Boolean(settings.txEnabled)
+            };
+
+            if (sessionLogMaxEntriesInput) {
+                sessionLogMaxEntriesInput.value = String(currentSettings.sessionLogMaxEntries);
+                sessionLogMaxEntriesInput.disabled = !currentSettings.sessionLogCapEnabled;
+            }
+
+            if (sessionLogSizeLimitInput) {
+                sessionLogSizeLimitInput.value = String(currentSettings.sessionLogSizeLimitMb);
+            }
+
+            if (systemLogMaxAgeDaysInput) {
+                systemLogMaxAgeDaysInput.value = String(currentSettings.systemLogMaxAgeDays);
+            }
+
+            if (systemLogSizeLimitInput) {
+                systemLogSizeLimitInput.value = String(currentSettings.systemLogSizeLimitMb);
+            }
+
+            if (txEnabledToggle) {
+                txEnabledToggle.checked = currentSettings.txEnabled;
+            }
+
+            if (sessionLogsToggle) {
+                sessionLogsToggle.checked = Boolean(currentSettings.sessionLogCapEnabled);
+            }
+
+            if (systemLogsToggle) {
+                systemLogsToggle.checked = Boolean(currentSettings.systemLogsEnabled);
+            }
+
+            updateSessionLogToggleUi();
+            updateSystemLogToggleUi();
+
+            if (txEnabledLabel) {
+                txEnabledLabel.textContent = currentSettings.txEnabled ? 'TX enabled' : 'TX disabled';
+            }
+
+            txEnabled = currentSettings.txEnabled;
+            setSettingsDirty(false);
+            updateTransmitterStatus();
+            updateSendControlStates();
+            pruneDisplayedSessionLogs();
+        }
+
+        function readSettingsFromUi() {
+            return {
+                sessionLogMaxEntries: (() => {
+                    const parsed = parseInt(sessionLogMaxEntriesInput?.value, 10);
+                    return Math.max(1, Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.sessionLogMaxEntries);
+                })(),
+                sessionLogCapEnabled: Boolean(sessionLogsToggle && sessionLogsToggle.checked),
+                sessionLogSizeLimitMb: Math.max(1, parseInt(sessionLogSizeLimitInput?.value, 10) || DEFAULT_SETTINGS.sessionLogSizeLimitMb),
+                systemLogMaxAgeDays: Math.max(1, parseInt(systemLogMaxAgeDaysInput?.value, 10) || DEFAULT_SETTINGS.systemLogMaxAgeDays),
+                systemLogSizeLimitMb: Math.max(1, parseInt(systemLogSizeLimitInput?.value, 10) || DEFAULT_SETTINGS.systemLogSizeLimitMb),
+                txEnabled: Boolean(txEnabledToggle && txEnabledToggle.checked),
+                systemLogsEnabled: Boolean(systemLogsToggle && systemLogsToggle.checked)
+            };
+        }
+
+        function loadSettings() {
+            return fetch(`${backendBaseUrl}/api/settings`)
+                .then((response) => response.json())
+                .then((settings) => {
+                    applySettingsToUi(settings || DEFAULT_SETTINGS);
+                })
+                .catch(() => {
+                    applySettingsToUi(DEFAULT_SETTINGS);
+                });
+        }
+
+        function saveSettings() {
+            const nextSettings = readSettingsFromUi();
+
+            return fetch(`${backendBaseUrl}/api/settings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(nextSettings)
+            })
+                .then((response) => response.json())
+                .then((settings) => {
+                    applySettingsToUi({ ...nextSettings, ...(settings || {}) });
+                    return loadLogs();
+                })
+                .catch(() => {
+                    showTxFeedback('Could not save settings.', 'error');
+                });
+        }
+
+        function loadLogs() {
+            return fetch(`${backendBaseUrl}/api/logs`)
+                .then(response => response.json())
+                .then((logs) => {
+                    const container = document.getElementById('logContainer');
+                    container.innerHTML = '';
+                    resetReceivedPanel();
+                    ensureSessionLogLimitBanner();
+
+                    if (logs.length === 0) {
+                        renderLogEmptyState();
+                        return;
+                    }
+
+                    logs.forEach(logLine => {
+                        const timestampMatch = logLine.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/);
+                        const timestamp = timestampMatch ? formatTimestamp(timestampMatch[1]) : 'N/A';
+                        const data = timestampMatch ? logLine.substring(timestampMatch[0].length + 3) : logLine;
+                        const parsedData = parseLogData(data);
+
+                        if (isSniffedReceive(parsedData)) {
+                            registerReceivedCode(parsedData, timestamp, data);
+                        } else if (parsedData && parsedData.type === 'tx') {
+                            registerTransmittedCode();
+                        }
+
+                        container.appendChild(createLogEntry(timestamp, data));
+                    });
+
+                    pruneDisplayedSessionLogs();
+                })
+                .catch(err => console.error('Error fetching logs:', err));
         }
 
         function saveThemePreference(theme) {
@@ -482,6 +923,19 @@
             clearSystemButton.addEventListener('click', sendClearSystemEvent);
         }
         themeToggleButton.addEventListener('click', toggleTheme);
+        if (sessionLogsToggle) {
+            sessionLogsToggle.addEventListener('change', () => {
+                updateSessionLogToggleUi();
+                setSettingsDirty(true);
+                updateSessionLogLimitBanner();
+            });
+        }
+        if (systemLogsToggle) {
+            systemLogsToggle.addEventListener('change', () => {
+                updateSystemLogToggleUi();
+                setSettingsDirty(true);
+            });
+        }
         if (bfAutoPauseToggle) {
             bfAutoPauseToggle.addEventListener('change', () => {
                 if (!bfAutoPauseToggle.checked && bfAutoPaused && !hasPendingBruteForceRequest()) {
@@ -625,6 +1079,26 @@
         }
 
         function updateTransmitterStatus() {
+            if (!txEnabled) {
+                txStatusBadge.textContent = 'Disabled in settings';
+                txStatusBadge.classList.toggle('bg-emerald-50', false);
+                txStatusBadge.classList.toggle('text-emerald-700', false);
+                txStatusBadge.classList.toggle('bg-rose-50', true);
+                txStatusBadge.classList.toggle('text-rose-700', true);
+                txStatusBadge.classList.toggle('bg-amber-50', false);
+                txStatusBadge.classList.toggle('text-amber-700', false);
+
+                if (txDisabledNotice) {
+                    txDisabledNotice.classList.remove('hidden');
+                }
+
+                return;
+            }
+
+            if (txDisabledNotice) {
+                txDisabledNotice.classList.add('hidden');
+            }
+
             const isLagging = isEspLagging();
             const isReady = isConnectionReady() && !isLagging;
             const isUnavailable = !isReady && !isLagging;
@@ -667,46 +1141,47 @@
         }
 
         function updateSendControlStates() {
-            const disableSendButtons = !isConnectionReady() || isEspLagging();
+            const disableTxActions = !txEnabled || !isConnectionReady() || isEspLagging();
+            const disableLogActions = !isConnectionReady() || isEspLagging();
 
             if (clearLogsButton) {
-                clearLogsButton.disabled = disableSendButtons;
+                clearLogsButton.disabled = disableLogActions;
             }
 
             if (clearTxButton) {
-                clearTxButton.disabled = disableSendButtons;
+                clearTxButton.disabled = disableTxActions;
             }
 
             if (clearSystemButton) {
-                clearSystemButton.disabled = disableSendButtons;
+                clearSystemButton.disabled = disableLogActions;
             }
 
             if (bfModeRepeat) {
-                bfModeRepeat.disabled = disableSendButtons;
+                bfModeRepeat.disabled = disableTxActions;
             }
 
             if (bfModeCycle) {
-                bfModeCycle.disabled = disableSendButtons;
+                bfModeCycle.disabled = disableTxActions;
             }
 
             if (bfCycleRestart) {
-                bfCycleRestart.disabled = disableSendButtons;
+                bfCycleRestart.disabled = disableTxActions;
             }
 
             if (bfAutoPauseToggle) {
-                bfAutoPauseToggle.disabled = disableSendButtons;
+                bfAutoPauseToggle.disabled = disableTxActions;
             }
 
             if (sendTxButton) {
-                sendTxButton.disabled = disableSendButtons;
+                sendTxButton.disabled = disableTxActions;
             }
 
             if (bfStep) {
-                bfStep.disabled = disableSendButtons || bfMode.value === 'repeat';
+                bfStep.disabled = disableTxActions || bfMode.value === 'repeat';
             }
 
             if (bfStartStop) {
-                bfStartStop.disabled = disableSendButtons && !bfRunning;
+                bfStartStop.disabled = disableTxActions && !bfRunning;
             }
         }
 
@@ -1100,12 +1575,133 @@
                     No codes sniffed yet. Waiting for the ESP to catch the first one.
                 </div>
             `;
+            ensureSessionLogLimitBanner();
         }
 
         function clearLogEmptyState() {
             const emptyState = document.getElementById('logEmptyState');
             if (emptyState) {
                 emptyState.remove();
+            }
+        }
+
+        function pruneDisplayedSessionLogs(reserveSpaceForNewEntry = false) {
+            if (!isSessionLogCapEnabled()) {
+                syncLogTotals();
+                return;
+            }
+
+            const maxEntries = Number(currentSettings.sessionLogMaxEntries);
+            if (!Number.isFinite(maxEntries)) {
+                syncLogTotals();
+                return;
+            }
+
+            const container = document.getElementById('logContainer');
+            if (!container) {
+                return;
+            }
+
+            const maxEntryCount = Math.max(1, Math.floor(maxEntries));
+            const targetLength = reserveSpaceForNewEntry ? maxEntryCount - 1 : maxEntryCount;
+            const entries = Array.from(container.children).filter((child) => child.id !== 'logEmptyState' && child.id !== 'sessionLogLimitBanner');
+
+            while (entries.length > targetLength) {
+                const oldestEntry = entries.pop();
+                if (oldestEntry) {
+                    oldestEntry.remove();
+                }
+            }
+
+            if (entries.length > 0) {
+                clearLogEmptyState();
+            }
+
+            syncLogTotals();
+            ensureSessionLogLimitBanner();
+        }
+
+        function countDisplayedSessionLogs() {
+            const container = document.getElementById('logContainer');
+
+            if (!container) {
+                return 0;
+            }
+
+            return Array.from(container.children).filter((child) => child.id !== 'logEmptyState' && child.id !== 'sessionLogLimitBanner').length;
+        }
+
+        function ensureSessionLogLimitBanner() {
+            const container = document.getElementById('logContainer');
+            if (!container) return;
+
+            let banner = document.getElementById('sessionLogLimitBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'sessionLogLimitBanner';
+                banner.className = 'session-log-limit-banner mb-3 light-hover-card rounded-xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-900/5 text-sm font-semibold text-slate-900 sticky top-0 z-20';
+                banner.setAttribute('role', 'status');
+                banner.setAttribute('aria-live', 'polite');
+                container.prepend(banner);
+            }
+
+            updateSessionLogLimitBanner();
+        }
+
+        function updateSessionLogLimitBanner() {
+            const banner = document.getElementById('sessionLogLimitBanner');
+            if (!banner) return;
+
+            const maxEntries = Number(currentSettings.sessionLogMaxEntries);
+            if (!Number.isFinite(maxEntries)) {
+                banner.hidden = true;
+                return;
+            }
+
+            banner.hidden = false;
+            const limit = Math.max(1, Math.floor(maxEntries));
+            const displayedCount = countDisplayedSessionLogs();
+            const isCapEnabled = isSessionLogCapEnabled();
+            banner.innerHTML = `
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Session logs</h2>
+                        <p class="mt-1 text-xs text-slate-500">Displayed ${displayedCount}${isCapEnabled ? ` of ${limit}` : ''}</p>
+                    </div>
+                </div>
+                <div class="mt-2 text-xs font-medium text-slate-500">${isCapEnabled ? 'Limit is active for the entries currently shown above.' : 'Limit is disabled for the entries currently shown above.'}</div>
+            `;
+        }
+
+        function updateSessionLogToggleUi() {
+            if (sessionLogsToggle) {
+                currentSettings.sessionLogCapEnabled = sessionLogsToggle.checked;
+            }
+
+            if (sessionLogsToggleLabel) {
+                sessionLogsToggleLabel.textContent = sessionLogsToggle && sessionLogsToggle.checked ? 'Cap enabled' : 'Cap disabled';
+            }
+
+            if (sessionLogMaxEntriesInput) {
+                sessionLogMaxEntriesInput.disabled = !(sessionLogsToggle && sessionLogsToggle.checked);
+            }
+        }
+
+        function updateSystemLogToggleUi() {
+            if (systemLogsToggle) {
+                currentSettings.systemLogsEnabled = systemLogsToggle.checked;
+            }
+
+            if (systemLogsToggleLabel) {
+                systemLogsToggleLabel.textContent = systemLogsToggle && systemLogsToggle.checked ? 'System logs enabled' : 'System logs disabled';
+            }
+
+            if (systemLogMaxAgeDaysInput) {
+                systemLogMaxAgeDaysInput.disabled = !(systemLogsToggle && systemLogsToggle.checked);
+            }
+
+            if (systemLogSizeLimitInput) {
+                systemLogSizeLimitInput.disabled = !(systemLogsToggle && systemLogsToggle.checked);
             }
         }
 
@@ -1135,39 +1731,13 @@
             bfCycleRestart.classList.toggle('hidden', !shouldShow);
         }
 
-        // --- Log loading ---
         window.addEventListener('load', function () {
+            setPageView(getCurrentPageView(), false);
+            loadSettings();
+            loadLogs();
             updateBruteForceModeUI();
             updateBruteForceStartStopButtonUI();
             updateBruteForceCardUI();
-            resetReceivedPanel();
-
-            fetch(`${backendBaseUrl}/api/logs`)
-                .then(response => response.json())
-                .then(logs => {
-                    const container = document.getElementById('logContainer');
-
-                    if (logs.length > 0) {
-                        clearLogEmptyState();
-                    }
-
-                    logs.forEach(logLine => {
-                        // Try to parse timestamp from the line (format: YYYY-MM-DDTHH:MM:SS.sssZ - ...)
-                        const timestampMatch = logLine.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/);
-                        const timestamp = timestampMatch ? formatTimestamp(timestampMatch[1]) : 'N/A';
-                        const data = timestampMatch ? logLine.substring(timestampMatch[0].length + 3) : logLine;
-                        const parsedData = parseLogData(data);
-
-                        if (isSniffedReceive(parsedData)) {
-                            registerReceivedCode(parsedData, timestamp, data);
-                        } else if (parsedData && parsedData.type === 'tx') {
-                            registerTransmittedCode();
-                        }
-
-                        container.appendChild(createLogEntry(timestamp, data));
-                    });
-                })
-                .catch(err => console.error('Error fetching logs:', err));
 
             loadHistory();
             renderHistory();
@@ -1218,6 +1788,17 @@
             updateConnectionBanner();
         });
 
+        socket.on("settings", function (settings) {
+            applySettingsToUi(settings || DEFAULT_SETTINGS);
+            pruneReceivedCodes();
+            pruneDisplayedSessionLogs();
+        });
+
+        socket.on("settings_updated", function (settings) {
+            applySettingsToUi({ ...DEFAULT_SETTINGS, ...(settings || {}) });
+            loadLogs();
+        });
+
         socket.on('backend_pong', function (payload) {
             const requestId = payload && payload.requestId ? payload.requestId : null;
             const sentAtMs = requestId && pendingBackendPings.has(requestId)
@@ -1242,6 +1823,7 @@
             const parsedData = typeof logData.data === 'object' && logData.data !== null ? logData.data : parseLogData(data);
 
             if (isSniffedReceive(parsedData)) {
+                pruneReceivedCodes(true);
                 clearLogEmptyState();
                 registerReceivedCode(parsedData, timestamp, data);
             } else if (parsedData && parsedData.type === 'tx') {
@@ -1249,9 +1831,16 @@
                 registerTransmittedCode();
             }
 
+            pruneDisplayedSessionLogs(true);
             const logEntry = createLogEntry(timestamp, data);
             const container = document.getElementById('logContainer');
-            container.insertBefore(logEntry, container.firstChild);
+            const banner = document.getElementById('sessionLogLimitBanner');
+            if (banner && banner.parentElement === container) {
+                container.insertBefore(logEntry, banner.nextSibling);
+            } else {
+                container.insertBefore(logEntry, container.firstChild);
+            }
+            pruneDisplayedSessionLogs();
         });
 
         socket.on("clear", function () {
@@ -1321,6 +1910,55 @@
             clearPendingTxRequests();
             showTxFeedback(message, 'error');
         });
+
+        if (dashboardNavButton) {
+            dashboardNavButton.addEventListener('click', () => setPageView('dashboard'));
+        }
+
+        if (settingsNavButton) {
+            settingsNavButton.addEventListener('click', () => setPageView('settings'));
+        }
+
+        if (sessionLogSizeLimitInput) {
+            sessionLogSizeLimitInput.addEventListener('input', () => setSettingsDirty(true));
+        }
+
+        if (sessionLogMaxEntriesInput) {
+            sessionLogMaxEntriesInput.addEventListener('input', () => setSettingsDirty(true));
+        }
+
+        if (systemLogMaxAgeDaysInput) {
+            systemLogMaxAgeDaysInput.addEventListener('input', () => setSettingsDirty(true));
+        }
+
+        if (systemLogSizeLimitInput) {
+            systemLogSizeLimitInput.addEventListener('input', () => setSettingsDirty(true));
+        }
+
+        if (txEnabledToggle) {
+            txEnabledToggle.addEventListener('change', () => {
+                if (txEnabledLabel) {
+                    txEnabledLabel.textContent = txEnabledToggle.checked ? 'TX enabled' : 'TX disabled';
+                }
+
+                setSettingsDirty(true);
+                updateTransmitterStatus();
+                updateSendControlStates();
+            });
+        }
+
+        if (saveSettingsButton) {
+            saveSettingsButton.addEventListener('click', () => {
+                saveSettings();
+            });
+        }
+
+        if (resetSettingsButton) {
+            resetSettingsButton.addEventListener('click', () => {
+                applySettingsToUi(DEFAULT_SETTINGS);
+                saveSettings();
+            });
+        }
 
         // --- Transmitter history management ---
         const STORAGE_KEY = 'txHistory';
@@ -1407,8 +2045,14 @@
         let totalTransmittedItems = 0;
 
         function syncLogTotals() {
-            receivedTotalCount.textContent = String(totalReceivedItems);
+            receivedTotalCount.textContent = formatReceivedTotal();
             transmittedTotalCount.textContent = String(totalTransmittedItems);
+            updateSessionLogLimitBanner();
+        }
+
+        function formatReceivedTotal() {
+            // Show the actual cumulative total received items here. The banner shows the retained limit.
+            return String(totalReceivedItems);
         }
 
         function resetReceivedPanel() {
@@ -1417,6 +2061,29 @@
             totalTransmittedItems = 0;
             syncLogTotals();
             renderReceivedCodes();
+        }
+
+        function pruneReceivedCodes(reserveSpaceForNewEntry = false) {
+            if (!isSessionLogCapEnabled()) {
+                return;
+            }
+
+            const maxEntries = Number(currentSettings.sessionLogMaxEntries);
+            if (!Number.isFinite(maxEntries)) {
+                return;
+            }
+
+            const maxEntryCount = Math.max(1, Math.floor(maxEntries));
+            const targetSize = reserveSpaceForNewEntry ? maxEntryCount - 1 : maxEntryCount;
+
+            while (receivedCodes.size > targetSize) {
+                const oldestCode = receivedCodes.keys().next().value;
+                if (oldestCode === undefined) {
+                    break;
+                }
+
+                receivedCodes.delete(oldestCode);
+            }
         }
 
         function isSniffedReceive(parsedData) {
@@ -1428,6 +2095,7 @@
             syncLogTotals();
 
             const code = String(parsedData.code);
+            pruneReceivedCodes(true);
             const existing = receivedCodes.get(code) || {
                 code: code,
                 count: 0,
@@ -1450,6 +2118,7 @@
                 receivedCodes.delete(code);
             }
             receivedCodes.set(code, existing);
+            pruneReceivedCodes();
             renderReceivedCodes();
         }
 
@@ -1622,6 +2291,13 @@
         function sendCode(code, options = {}) {
             if (!code) return;
 
+            if (!txEnabled) {
+                if (options.showFeedback !== false) {
+                    showTxFeedback('TX functionality is disabled in settings.', 'warning');
+                }
+                return;
+            }
+
             if (!isConnectionReady()) {
                 if (options.showFeedback !== false) {
                     showTxFeedback('Application or ESP32 is disconnected. Reconnect before sending.', 'warning');
@@ -1700,6 +2376,11 @@
 
         function startBruteForce() {
             if (bfRunning) return;
+            if (!txEnabled) {
+                showTxFeedback('TX functionality is disabled in settings.', 'warning');
+                return;
+            }
+
             markBruteForceUsed();
             const mode = bfMode.value;
             const rate = Math.max(1, parseInt(bfRate.value) || 50);

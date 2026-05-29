@@ -82,7 +82,6 @@ If you'd like to access the webpage from a different device;
 # Limitations
 - Connecting multiple ESPs is not currently supported
 - There's no security setup (https, wss)
-- The repetition functionalities do not take the ESP hardware into account - extended use may overheat or crash the device
 
 # Purpose
 This is a testing/demo tool, not meant for any purposes outside of educational context.

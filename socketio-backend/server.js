@@ -5,6 +5,19 @@ const fs = require("fs");
 
 const helpers = require("./helpers");
 const port = 8890;
+const backendLogPath = path.join(__dirname, "backend.log");
+
+const DEFAULT_SETTINGS = {
+  sessionLogSizeLimitMb: 5,
+  sessionLogMaxEntries: 200,
+  sessionLogCapEnabled: true,
+  systemLogMaxAgeDays: 30,
+  systemLogSizeLimitMb: 10,
+  systemLogsEnabled: true,
+  txEnabled: true
+};
+
+let currentSettings = { ...DEFAULT_SETTINGS };
 
 // Enable payload (TX/RX) console logging when DEBUG_PAYLOADS is set.
 // Accepts: DEBUG_PAYLOADS=1 or DEBUG=true or DEBUG_PAYLOADS=true
@@ -28,6 +41,142 @@ const espConnectionState = {
   lastHeartbeatSentAt: null,
   responseTimeMs: null
 };
+
+function parsePositiveNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseSessionLogMaxEntries(value, fallback) {
+  const parsed = Number(value);
+
+  if (parsed === -1) {
+    return -1;
+  }
+
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+function normalizeSettings(input) {
+  const source = input && typeof input === "object" ? input : {};
+
+  return {
+    sessionLogSizeLimitMb: parsePositiveNumber(source.sessionLogSizeLimitMb, currentSettings.sessionLogSizeLimitMb),
+    sessionLogMaxEntries: parseSessionLogMaxEntries(source.sessionLogMaxEntries, currentSettings.sessionLogMaxEntries),
+    sessionLogCapEnabled: source.sessionLogCapEnabled !== undefined ? Boolean(source.sessionLogCapEnabled) : currentSettings.sessionLogCapEnabled,
+    systemLogMaxAgeDays: parsePositiveNumber(source.systemLogMaxAgeDays, currentSettings.systemLogMaxAgeDays),
+    systemLogSizeLimitMb: parsePositiveNumber(source.systemLogSizeLimitMb, currentSettings.systemLogSizeLimitMb),
+    systemLogsEnabled: source.systemLogsEnabled !== undefined ? Boolean(source.systemLogsEnabled) : currentSettings.systemLogsEnabled,
+    txEnabled: source.txEnabled !== undefined ? Boolean(source.txEnabled) : currentSettings.txEnabled
+  };
+}
+
+function getSessionLogLimitBytes() {
+  return Math.max(1, Math.round(currentSettings.sessionLogSizeLimitMb * 1024 * 1024));
+}
+
+function getSystemLogLimitBytes() {
+  return Math.max(1, Math.round(currentSettings.systemLogSizeLimitMb * 1024 * 1024));
+}
+
+function pruneSessionLogs(reserveSpaceForNewEntry = false) {
+  if (!currentSettings.sessionLogCapEnabled) {
+    return;
+  }
+
+  const maxEntries = Number(currentSettings.sessionLogMaxEntries);
+
+  if (!Number.isFinite(maxEntries)) {
+    return;
+  }
+
+  const maxEntryCount = Math.max(1, Math.floor(maxEntries));
+  const targetLength = reserveSpaceForNewEntry ? maxEntryCount - 1 : maxEntryCount;
+
+  while (logEntries.length > targetLength) {
+    logEntries.shift();
+  }
+
+  const limitBytes = getSessionLogLimitBytes();
+  let totalBytes = logEntries.reduce((sum, entry) => sum + Buffer.byteLength(entry + "\n", "utf8"), 0);
+
+  while (logEntries.length > 0 && totalBytes > limitBytes) {
+    const removed = logEntries.shift();
+    totalBytes -= Buffer.byteLength(removed + "\n", "utf8");
+  }
+}
+
+function pruneSystemLogFile() {
+  if (!currentSettings.systemLogsEnabled) {
+    return;
+  }
+
+  if (!fs.existsSync(backendLogPath)) {
+    return;
+  }
+
+  let contents = "";
+  try {
+    contents = fs.readFileSync(backendLogPath, "utf8");
+  } catch (err) {
+    console.log("Error reading system log file for pruning:", err);
+    return;
+  }
+
+  if (!contents.trim()) {
+    return;
+  }
+
+  const cutoffTime = Date.now() - (currentSettings.systemLogMaxAgeDays * 24 * 60 * 60 * 1000);
+  let lines = contents.split(/\r?\n/).filter(Boolean).filter((line) => {
+    const timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/);
+    if (!timestampMatch) {
+      return true;
+    }
+
+    const timestamp = Date.parse(timestampMatch[1]);
+    return !Number.isNaN(timestamp) && timestamp >= cutoffTime;
+  });
+
+  const limitBytes = getSystemLogLimitBytes();
+  let serialized = lines.length > 0 ? lines.join("\n") + "\n" : "";
+
+  while (lines.length > 0 && Buffer.byteLength(serialized, "utf8") > limitBytes) {
+    lines.shift();
+    serialized = lines.length > 0 ? lines.join("\n") + "\n" : "";
+  }
+
+  try {
+    fs.writeFileSync(backendLogPath, serialized);
+  } catch (err) {
+    console.log("Error pruning system log file:", err);
+  }
+}
+
+function appendSystemLogEntry(logEntry) {
+  fs.appendFile(backendLogPath, logEntry, function (err) {
+    if (err) {
+      console.log("Error writing to log file:", err);
+      return;
+    }
+
+    pruneSystemLogFile();
+  });
+}
+
+function setSettings(nextSettings) {
+  currentSettings = normalizeSettings(nextSettings);
+  pruneSessionLogs();
+  pruneSystemLogFile();
+}
+
+function getSettingsSnapshot() {
+  return { ...currentSettings };
+}
+
+function emitSettings(io) {
+  io.emit("settings_updated", getSettingsSnapshot());
+}
 
 function emitConnectionStatus(io) {
   const lastHeartbeatAt = espConnectionState.lastHeartbeatAt || espConnectionState.lastHeartbeatSeenAt;
@@ -89,6 +238,16 @@ app.get("/api/logs", function (req, res) {
   res.json([...logEntries].reverse());
 });
 
+app.get("/api/settings", function (req, res) {
+  res.json(getSettingsSnapshot());
+});
+
+app.post("/api/settings", function (req, res) {
+  setSettings(req.body);
+  emitSettings(io);
+  res.json(getSettingsSnapshot());
+});
+
 const http = require("http").createServer(app);
 const io = require("socket.io")(http, {
   cors: {
@@ -112,6 +271,7 @@ io.on("connection", function (socket) {
   }
 
   emitConnectionStatus(io);
+  socket.emit("settings", getSettingsSnapshot());
 
   const message = "a client connected: " + connId;
   helpers.logMessage("connect", message, connId);
@@ -136,14 +296,11 @@ io.on("connection", function (socket) {
     const timestamp = new Date().toISOString();
     const logEntry = timestamp + " - " + JSON.stringify(data) + "\n";
 
+    pruneSessionLogs(true);
     logEntries.push(logEntry.trimEnd());
+    pruneSessionLogs();
 
-    // Write to backend.log file
-    fs.appendFile(path.join(__dirname, "backend.log"), logEntry, function (err) {
-      if (err) {
-        console.log("Error writing to log file:", err);
-      }
-    });
+    appendSystemLogEntry(logEntry);
 
     // Broadcast to all connected clients
     io.emit("rf_log", {
@@ -154,6 +311,11 @@ io.on("connection", function (socket) {
 
   // Handle transmit requests from clients
   socket.on("tx", function (data) {
+    if (!currentSettings.txEnabled) {
+      socket.emit("tx_error", { message: "TX functionality is disabled in settings." });
+      return;
+    }
+
     if (!data || data.code === undefined || data.code === null || String(data.code).trim() === "") {
       socket.emit("tx_error", { message: "Invalid transmit request: missing code." });
       return;
@@ -169,14 +331,11 @@ io.on("connection", function (socket) {
     const timestamp = new Date().toISOString();
     const logEntry = timestamp + " - " + JSON.stringify({ type: "tx", code: normalizedCode, meta: data.meta || null }) + "\n";
 
+    pruneSessionLogs(true);
     logEntries.push(logEntry.trimEnd());
+    pruneSessionLogs();
 
-    // Write to backend.log file
-    fs.appendFile(path.join(__dirname, "backend.log"), logEntry, function (err) {
-      if (err) {
-        console.log("Error writing tx to log file:", err);
-      }
-    });
+    appendSystemLogEntry(logEntry);
 
     // Broadcast a rf_log event so all clients see the transmit
     io.emit("rf_log", {
@@ -219,11 +378,17 @@ io.on("connection", function (socket) {
     try {
       logEntries.length = 0;
       io.emit("clear");
-      fs.writeFileSync(path.join(__dirname, "backend.log"), "");
+      fs.writeFileSync(backendLogPath, "");
       io.emit("system_cleared");
     } catch (err) {
       console.log("Error clearing system log file:", err);
     }
+  });
+
+  socket.on("settings_update", function (data) {
+    setSettings(data);
+    emitSettings(io);
+    socket.emit("settings", getSettingsSnapshot());
   });
 
   socket.on("esp_heartbeat_ack", function () {
@@ -253,8 +418,6 @@ io.on("connection", function (socket) {
     }
 
     const isHeartbeatOrPing = event && (event.includes("heartbeat") || event.includes("ping") || event.includes("pong"));
-    const isPayloadEvent = event && (event === "tx" || event === "rf_log" || event === "rx");
-
     if (DEBUG_PAYLOADS) {
       console.log(`Received event: ${event}`);
       console.log("With arguments:", args);

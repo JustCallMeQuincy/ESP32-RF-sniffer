@@ -144,6 +144,28 @@
 
         html[data-theme="dark"] .theme-toggle-button:hover {
             background: rgba(30, 41, 59, 0.95);
+            box-shadow: 0 14px 28px rgba(2, 6, 23, 0.35);
+            transform: translateY(-1px);
+        }
+
+        html[data-theme="dark"] .light-hover-button:hover,
+        html[data-theme="dark"] .nav-tab-button:hover,
+        html[data-theme="dark"] .light-hover-card:hover {
+            border-color: #475569;
+            box-shadow: 0 16px 32px rgba(2, 6, 23, 0.28);
+            transform: translateY(-1px);
+        }
+
+        html[data-theme="dark"] .light-hover-button:hover,
+        html[data-theme="dark"] .nav-tab-button:hover {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        html[data-theme="dark"] .nav-tab-button.bg-slate-900:hover {
+            background-color: #475569 !important;
+            border-color: #64748b;
+            box-shadow: 0 16px 32px rgba(2, 6, 23, 0.36);
         }
 
         html:not([data-theme="dark"]) .light-hover-button,
@@ -219,14 +241,6 @@
 
         html[data-theme="dark"] .bf-auto-pause-toggle .peer:checked+.bf-auto-pause-track {
             background: #10b981;
-        }
-
-        .bf-auto-pause-toggle input:checked+.bf-auto-pause-track .bf-auto-pause-knob {
-            transform: translateX(1rem);
-        }
-
-        .tx-enabled-toggle input:checked+.tx-enabled-track .tx-enabled-knob {
-            transform: translateX(1rem);
         }
 
         html[data-theme="dark"] #bfControlCard.bf-paused {
@@ -329,7 +343,7 @@
                     <button id="clearTxButton" type="button"
                         class="light-hover-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">Clear</button>
                     <button id="sendTxButton"
-                        class="light-hover-button light-hover-button-primary inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Send</button>
+                        class="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-600">Send</button>
                 </div>
 
                 <div id="txFeedback"
@@ -367,7 +381,7 @@
                                 <span
                                     class="bf-auto-pause-track relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
                                     <span
-                                        class="bf-auto-pause-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform"></span>
+                                        class="bf-auto-pause-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></span>
                                 </span>
                                 <span class="text-xs font-semibold text-slate-600 ml-2">Auto-pause</span>
                             </label>
@@ -377,11 +391,11 @@
                             <div class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 shadow-sm"
                                 role="tablist" aria-label="Brute-force mode">
                                 <button id="bfModeRepeat" type="button"
-                                    class="rounded-md px-3 py-1 text-sm font-semibold transition"
+                                    class="light-hover-button nav-tab-button rounded-md px-3 py-1 text-sm font-semibold transition"
                                     aria-pressed="true">Repeat
                                     single</button>
                                 <button id="bfModeCycle" type="button"
-                                    class="rounded-md px-3 py-1 text-sm font-semibold transition"
+                                    class="light-hover-button nav-tab-button rounded-md px-3 py-1 text-sm font-semibold transition"
                                     aria-pressed="false">Cycle
                                     range</button>
                             </div>
@@ -557,7 +571,7 @@
                             <span
                                 class="tx-enabled-track relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
                                 <span
-                                    class="tx-enabled-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform"></span>
+                                    class="tx-enabled-knob ml-0.5 h-4 w-4 translate-x-0 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></span>
                             </span>
                             <span id="txEnabledLabel" class="text-sm font-semibold text-slate-700">TX enabled</span>
                         </label>
@@ -1760,7 +1774,7 @@
             espConnectedAt = null;
             espResponseTimeMs = null;
             stopBackendPingMonitor();
-            clearPendingTxRequests('Connection lost before transmit confirmation.', 'warning');
+            clearPendingTxRequests();
             updateConnectionBanner();
         });
 
@@ -2188,7 +2202,7 @@
                             return;
                         }
                         txCodeInput.value = entry.code;
-                        sendCode(entry.code);
+                        sendCode(entry.code, { source: 'history' });
                     });
 
                     receivedCodesDiv.appendChild(card);
@@ -2268,7 +2282,7 @@
                         return;
                     }
                     txCodeInput.value = code;
-                    sendCode(code);
+                    sendCode(code, { source: 'history' });
                 });
 
                 actions.appendChild(resendButton);
@@ -2292,14 +2306,14 @@
             if (!code) return;
 
             if (!txEnabled) {
-                if (options.showFeedback !== false) {
+                if (options.showFeedback !== false && options.source === 'manual') {
                     showTxFeedback('TX functionality is disabled in settings.', 'warning');
                 }
                 return;
             }
 
             if (!isConnectionReady()) {
-                if (options.showFeedback !== false) {
+                if (options.showFeedback !== false && options.source === 'manual') {
                     showTxFeedback('Application or ESP32 is disconnected. Reconnect before sending.', 'warning');
                 }
                 return;
@@ -2356,7 +2370,7 @@
         sendTxButton.addEventListener('click', () => {
             const code = txCodeInput.value.trim();
             if (!code) return alert('Enter a code to send');
-            sendCode(code);
+            sendCode(code, { source: 'manual' });
         });
 
         clearTxButton.addEventListener('click', () => {
